@@ -1,0 +1,1870 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kartu Flashcard Mandarin HSK 1–3 & Audio Pembaca</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            chinese: ['"Noto Sans SC"', 'sans-serif'],
+          },
+          colors: {
+            crimson: {
+              50: '#fff1f2',
+              100: '#ffe4e6',
+              500: '#f43f5e',
+              600: '#e11d48',
+              700: '#be123c',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Perspektif 3D untuk animasi balik kartu (flip card) */
+    .perspective-1000 {
+      perspective: 1200px;
+    }
+    .transform-style-3d {
+      transform-style: preserve-3d;
+    }
+    .backface-hidden {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    .rotate-y-180 {
+      transform: rotateY(180deg);
+    }
+    /* Animasi gelombang suara saat audio sedang membaca */
+    @keyframes soundWave {
+      0%, 100% { transform: scaleY(0.4); }
+      50% { transform: scaleY(1.2); }
+    }
+    .wave-bar {
+      animation: soundWave 0.7s ease-in-out infinite;
+    }
+    .wave-bar:nth-child(2) { animation-delay: 0.15s; }
+    .wave-bar:nth-child(3) { animation-delay: 0.3s; }
+    .wave-bar:nth-child(4) { animation-delay: 0.45s; }
+  </style>
+</head>
+<body class="bg-stone-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-200 selection:bg-rose-500 selection:text-white">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-stone-200 dark:border-slate-800">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-600 to-red-700 text-white flex items-center justify-center font-chinese font-bold text-xl shadow-md shadow-rose-600/20">
+          词
+        </div>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg tracking-tight leading-tight">Kartu Pintar Mandarin</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400">HSK 1–3 • Audio Pembaca & Contoh Kalimat</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- Ringkasan Progres -->
+        <div class="hidden md:flex items-center gap-2 bg-stone-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl text-xs font-medium">
+          <span class="text-amber-600 dark:text-amber-400" title="Perlu Diulang">🔔 <strong id="stat-review">0</strong> Ulang</span>
+          <span class="text-slate-300 dark:text-slate-600">|</span>
+          <span class="text-emerald-600 dark:text-emerald-400" title="Sudah Hafal">✅ <strong id="stat-mastered">0</strong> Hafal</span>
+          <span class="text-slate-300 dark:text-slate-600">|</span>
+          <span class="text-slate-600 dark:text-slate-300">📚 <strong id="stat-total">600</strong></span>
+        </div>
+
+        <!-- Tombol Tambah Kata -->
+        <button onclick="openAddModal()" class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs sm:text-sm font-semibold shadow-sm transition flex items-center gap-1.5">
+          <span>+ Tambah Kata</span>
+        </button>
+
+        <!-- Toggle Dark Mode -->
+        <button onclick="toggleDarkMode()" id="btn-theme" aria-label="Ganti Tema" class="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition">
+          🌙
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-5 pb-20">
+    <!-- Bar Filter Level & Status Reminder -->
+    <section class="bg-white dark:bg-slate-900 rounded-2xl border border-stone-200 dark:border-slate-800 p-3.5 sm:p-4 shadow-sm mb-5 space-y-3">
+      <!-- Filter Level HSK -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-1.5" id="level-tabs">
+          <button data-level="ALL" onclick="setLevelFilter('ALL')" class="level-tab px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold bg-rose-600 text-white transition">Semua (600)</button>
+          <button data-level="HSK1" onclick="setLevelFilter('HSK1')" class="level-tab px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium bg-stone-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700 transition">HSK 1 (150)</button>
+          <button data-level="HSK2" onclick="setLevelFilter('HSK2')" class="level-tab px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium bg-stone-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700 transition">HSK 2 (150)</button>
+          <button data-level="HSK3" onclick="setLevelFilter('HSK3')" class="level-tab px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium bg-stone-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700 transition">HSK 3 (300)</button>
+          <button data-level="CUSTOM" onclick="setLevelFilter('CUSTOM')" class="level-tab px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium bg-stone-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700 transition">Kata Saya (<span id="custom-count">0</span>)</button>
+        </div>
+
+        <!-- Mode Tampilan: Flashcard vs Daftar -->
+        <div class="flex items-center bg-stone-100 dark:bg-slate-800 p-1 rounded-xl">
+          <button id="view-card-btn" onclick="setViewMode('card')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-sm transition">
+            🃏 Kartu
+          </button>
+          <button id="view-list-btn" onclick="setViewMode('list')" class="px-3 py-1 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 transition">
+            📋 Daftar
+          </button>
+        </div>
+      </div>
+
+      <!-- Baris Pencarian, Status Reminder, & Acak -->
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+        <div class="sm:col-span-5 relative">
+          <input type="text" id="search-input" oninput="applyFilters()" placeholder="Cari Hanzi, Pinyin, atau arti Indonesia..." class="w-full pl-9 pr-8 py-2 rounded-xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+          <span class="absolute left-3 top-2.5 text-slate-400 text-sm">🔍</span>
+          <button id="clear-search" onclick="clearSearch()" class="hidden absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-sm">✕</button>
+        </div>
+
+        <div class="sm:col-span-4">
+          <select id="status-filter" onchange="applyFilters()" class="w-full px-3 py-2 rounded-xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            <option value="ALL">📌 Semua Status Reminder</option>
+            <option value="review">🔔 Perlu Diulang (Reminder)</option>
+            <option value="new">🆕 Belum Dipelajari</option>
+            <option value="mastered">✅ Sudah Hafal</option>
+          </select>
+        </div>
+
+        <div class="sm:col-span-3 flex gap-2">
+          <button onclick="shuffleDeck()" class="flex-1 px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs sm:text-sm font-medium transition flex items-center justify-center gap-1" title="Acak urutan kartu">
+            🔀 Acak
+          </button>
+          <button id="autoplay-btn" onclick="toggleAutoPlay()" class="flex-1 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 text-xs sm:text-sm font-medium transition flex items-center justify-center gap-1" title="Putar audio otomatis sebagai pengingat">
+            ▶️ Auto
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODE 1: TAMPILAN FLASHCARD INTERAKTIF -->
+    <section id="flashcard-section" class="space-y-4">
+      <!-- Bar Progres Dek -->
+      <div class="flex items-center justify-between text-xs sm:text-sm text-slate-600 dark:text-slate-400 px-1">
+        <span id="deck-counter" class="font-semibold">Kartu 1 dari 600</span>
+        <div class="flex items-center gap-3">
+          <button onclick="togglePinyinVisibility()" id="btn-toggle-pinyin" class="text-xs font-medium px-2.5 py-1 rounded-lg bg-stone-200/70 dark:bg-slate-800 hover:bg-stone-300/70 transition">
+            👁️ Pinyin: Tampil
+          </button>
+          <span id="mastery-percent" class="font-medium text-emerald-600 dark:text-emerald-400">0% Hafal</span>
+        </div>
+      </div>
+      <div class="w-full h-2 bg-stone-200 dark:bg-slate-800 rounded-full overflow-hidden">
+        <div id="progress-bar" class="h-full bg-gradient-to-r from-rose-500 to-amber-500 transition-all duration-300" style="width: 0%"></div>
+      </div>
+
+      <!-- Empty State jika pencarian kosong -->
+      <div id="empty-state" class="hidden bg-white dark:bg-slate-900 rounded-3xl border border-stone-200 dark:border-slate-800 p-10 text-center space-y-3">
+        <div class="text-4xl">🔍</div>
+        <h3 class="font-bold text-lg">Tidak ada kosakata yang cocok</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Coba ubah kata kunci pencarian atau pilih filter status lainnya.</p>
+        <button onclick="resetAllFilters()" class="px-4 py-2 rounded-xl bg-rose-600 text-white text-sm font-semibold">Reset Filter</button>
+      </div>
+
+      <!-- Kontainer Kartu 3D -->
+      <div id="card-wrapper" class="perspective-1000 w-full max-w-2xl mx-auto">
+        <div id="flashcard" onclick="flipCard()" class="relative w-full min-h-[410px] sm:min-h-[440px] cursor-pointer transition-transform duration-500 transform-style-3d">
+          
+          <!-- SISI DEPAN KARTU (Hanzi + Pinyin + Audio) -->
+          <div class="backface-hidden absolute inset-0 bg-white dark:bg-slate-900 rounded-3xl border-2 border-stone-200/90 dark:border-slate-800 shadow-xl shadow-stone-200/50 dark:shadow-none p-5 sm:p-8 flex flex-col justify-between">
+            <!-- Header Kartu Depan -->
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span id="front-level" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200/70 dark:border-rose-800/50">HSK 1 • #1</span>
+                <span id="front-status-badge" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-stone-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">🆕 Baru</span>
+              </div>
+              <span class="text-xs text-slate-400 font-medium">Depan • Ketuk untuk balik</span>
+            </div>
+
+            <!-- Konten Utama Hanzi -->
+            <div class="my-auto text-center py-4 space-y-3">
+              <div id="front-hanzi" class="font-chinese text-5xl sm:text-7xl font-bold tracking-wide text-slate-900 dark:text-white select-all leading-snug">
+                我
+              </div>
+              <div id="front-pinyin" class="text-xl sm:text-2xl font-semibold text-rose-600 dark:text-rose-400 tracking-wide transition-opacity duration-200">
+                wǒ
+              </div>
+            </div>
+
+            <!-- Kontrol Audio Pembaca (Depan) -->
+            <div class="space-y-3" onclick="event.stopPropagation()">
+              <div class="flex flex-wrap items-center justify-center gap-2.5">
+                <button onclick="speakCurrentWord(1.0)" class="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-sm font-semibold shadow-md shadow-rose-600/20 transition flex items-center gap-2">
+                  <span>🔊</span>
+                  <span>Dengarkan Kata</span>
+                </button>
+                <button onclick="speakCurrentWord(0.62)" class="px-4 py-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 active:scale-95 text-sm font-semibold transition flex items-center gap-1.5">
+                  <span>🐢</span>
+                  <span>Baca Pelan</span>
+                </button>
+                <button onclick="speakWithGeminiTTS()" id="btn-hd-tts" class="px-3.5 py-2.5 rounded-2xl bg-stone-100 hover:bg-stone-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 active:scale-95 text-xs sm:text-sm font-medium transition flex items-center gap-1.5" title="Suara Native HD dengan Gemini AI">
+                  <span>✨</span>
+                  <span>Suara HD</span>
+                </button>
+              </div>
+              <p class="text-center text-xs text-slate-400 dark:text-slate-500">
+                Ketuk area kosong kartu atau tekan <kbd class="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-slate-800 border border-stone-300 dark:border-slate-700 text-[10px]">Spasi</kbd> untuk melihat arti & contoh
+              </p>
+            </div>
+          </div>
+
+          <!-- SISI BELAKANG KARTU (Arti + Contoh Kosakata/Kalimat + Audio Contoh + AI) -->
+          <div class="backface-hidden rotate-y-180 absolute inset-0 bg-white dark:bg-slate-900 rounded-3xl border-2 border-rose-200 dark:border-rose-900/60 shadow-xl p-5 sm:p-7 flex flex-col justify-between overflow-y-auto">
+            <!-- Header Kartu Belakang -->
+            <div class="flex items-center justify-between gap-2 pb-2 border-b border-stone-100 dark:border-slate-800" onclick="event.stopPropagation()">
+              <div class="flex items-center gap-2.5">
+                <span id="back-hanzi" class="font-chinese text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">我</span>
+                <span id="back-pinyin" class="text-base sm:text-lg font-semibold text-rose-600 dark:text-rose-400">wǒ</span>
+                <button onclick="speakCurrentWord(1.0)" class="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 transition" title="Baca kata">
+                  🔊
+                </button>
+              </div>
+              <span class="text-xs text-slate-400">Belakang ↻</span>
+            </div>
+
+            <!-- Arti Bahasa Indonesia -->
+            <div class="py-3 text-center">
+              <span class="text-[11px] uppercase tracking-wider font-bold text-slate-400 block mb-1">Arti Bahasa Indonesia</span>
+              <h2 id="back-meaning" class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-snug">
+                saya, aku
+              </h2>
+            </div>
+
+            <!-- Kotak Contoh Penggunaan Kosakata -->
+            <div class="bg-stone-50 dark:bg-slate-800/80 rounded-2xl p-4 border border-stone-200/80 dark:border-slate-700/80 space-y-2" onclick="event.stopPropagation()">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-[11px] uppercase tracking-wider font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                  💡 Contoh Penggunaan
+                </span>
+                <div class="flex items-center gap-1.5">
+                  <button onclick="speakCurrentExample(1.0)" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition flex items-center gap-1">
+                    🔊 Baca Contoh
+                  </button>
+                  <button onclick="speakCurrentExample(0.65)" class="px-2 py-1 rounded-lg bg-stone-200 hover:bg-stone-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-xs font-medium transition" title="Baca contoh pelan">
+                    🐢
+                  </button>
+                </div>
+              </div>
+
+              <p id="back-ex-hanzi" class="font-chinese text-lg sm:text-xl font-bold text-slate-900 dark:text-white pt-1">
+                我是学生。
+              </p>
+              <p id="back-ex-pinyin" class="text-sm font-medium text-amber-700 dark:text-amber-300">
+                Wǒ shì xuéshēng.
+              </p>
+              <p id="back-ex-meaning" class="text-sm text-slate-600 dark:text-slate-300 italic">
+                "Saya adalah murid."
+              </p>
+            </div>
+
+            <!-- Tombol & Hasil Ekspansi Contoh AI -->
+            <div class="pt-3" onclick="event.stopPropagation()">
+              <button id="btn-ai-more" onclick="generateAIExamples()" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 dark:from-indigo-950/50 dark:to-purple-950/50 dark:hover:from-indigo-900/60 dark:hover:to-purple-900/60 border border-indigo-200/80 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition flex items-center justify-center gap-1.5">
+                <span>✨ Minta 2 Contoh Kalimat Lain & Tips Hafal (AI)</span>
+              </button>
+              <div id="ai-extra-box" class="hidden mt-2.5 p-3 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 text-xs space-y-2"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Tombol Navigasi & Penilaian Pengingat (Spaced Repetition) -->
+      <div id="controls-dock" class="max-w-2xl mx-auto space-y-3 pt-1">
+        <!-- Penilaian Hafalan (Reminder) -->
+        <div class="grid grid-cols-3 gap-2.5">
+          <button onclick="markCardStatus('review')" class="py-3 px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 font-semibold text-xs sm:text-sm transition active:scale-95 flex flex-col sm:flex-row items-center justify-center gap-1.5">
+            <span>🔔</span>
+            <span>Lupa / Ulangi</span>
+          </button>
+          <button onclick="markCardStatus('learning')" class="py-3 px-3 rounded-2xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 font-semibold text-xs sm:text-sm transition active:scale-95 flex flex-col sm:flex-row items-center justify-center gap-1.5">
+            <span>🤔</span>
+            <span>Ragu-ragu</span>
+          </button>
+          <button onclick="markCardStatus('mastered')" class="py-3 px-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 font-semibold text-xs sm:text-sm transition active:scale-95 flex flex-col sm:flex-row items-center justify-center gap-1.5">
+            <span>✅</span>
+            <span>Sudah Hafal</span>
+          </button>
+        </div>
+
+        <!-- Navigasi Sebelumnya / Balik / Berikutnya -->
+        <div class="flex items-center justify-between gap-3">
+          <button onclick="prevCard()" class="flex-1 py-3 px-4 rounded-2xl bg-white dark:bg-slate-900 hover:bg-stone-100 dark:hover:bg-slate-800 border border-stone-200 dark:border-slate-800 font-semibold text-sm transition active:scale-95">
+            ← Sebelumnya
+          </button>
+          <button onclick="flipCard()" class="py-3 px-5 rounded-2xl bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-semibold text-sm transition active:scale-95">
+            ↻ Balik Kartu
+          </button>
+          <button onclick="nextCard()" class="flex-1 py-3 px-4 rounded-2xl bg-white dark:bg-slate-900 hover:bg-stone-100 dark:hover:bg-slate-800 border border-stone-200 dark:border-slate-800 font-semibold text-sm transition active:scale-95">
+            Berikutnya →
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODE 2: TAMPILAN DAFTAR KOSA KATA (LENGKAP DENGAN AUDIO & CONTOH) -->
+    <section id="list-section" class="hidden space-y-3">
+      <div class="flex items-center justify-between text-xs sm:text-sm text-slate-500 dark:text-slate-400 px-1">
+        <span id="list-count-label">Menampilkan 600 kosakata</span>
+        <span>Klik kartu mana saja untuk membuka mode Flashcard</span>
+      </div>
+      <div id="vocab-list-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+    </section>
+  </main>
+
+  <!-- MODAL TAMBAH KOSA KATA BARU (+ AI AUTO-FILL) -->
+  <div id="add-modal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-stone-200 dark:border-slate-800 max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-lg">Tambah Kosakata Baru</h3>
+        <button onclick="closeAddModal()" class="p-1.5 rounded-xl hover:bg-stone-100 dark:hover:bg-slate-800 text-slate-500">✕</button>
+      </div>
+
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        Ketik huruf Mandarin (Hanzi) atau arti bahasa Indonesia, lalu gunakan tombol AI untuk mengisi Pinyin & contoh kalimat secara otomatis.
+      </p>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold mb-1">Hanzi (Mandarin) *</label>
+          <div class="flex gap-2">
+            <input type="text" id="new-hanzi" placeholder="Contoh: 加油" class="flex-1 px-3.5 py-2 rounded-xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 font-chinese text-lg focus:outline-none focus:ring-2 focus:ring-rose-500" />
+            <button type="button" id="btn-ai-autofill" onclick="autoFillNewWordWithAI()" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition whitespace-nowrap">
+              ✨ Isi Otomatis AI
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Pinyin *</label>
+            <input type="text" id="new-pinyin" placeholder="jiāyóu" class="w-full px-3 py-2 rounded-xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Arti Indonesia *</label>
+            <input type="text" id="new-meaning" placeholder="semangat!" class="w-full px-3 py-2 rounded-xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold mb-1">Contoh Kalimat (Hanzi)</label>
+          <input type="text" id="new-ex-hanzi" placeholder="考试加油！" class="w-full px-3 py-2 rounded-xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 font-chinese text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Pinyin Contoh</label>
+            <input type="text" id="new-ex-pinyin" placeholder="Kǎoshì jiāyóu!" class="w-full px-3 py-2 rounded-xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Arti Contoh</label>
+            <input type="text" id="new-ex-meaning" placeholder="Semangat ujiannya!" class="w-full px-3 py-2 rounded-xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500" />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeAddModal()" class="flex-1 py-2.5 rounded-xl bg-stone-100 dark:bg-slate-800 text-sm font-semibold">Batal</button>
+        <button onclick="saveNewWord()" class="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold shadow-md shadow-rose-600/20">Simpan Kartu</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. DATABASE LENGKAP 600 KOSA KATA HSK 1, HSK 2, DAN HSK 3 + CONTOH KALIMAT
+    // Format: [level, num, hanzi, pinyin, arti, exHanzi, exPinyin, exArti]
+    // =========================================================================
+    const RAW_VOCAB_DATA = [
+      // --- HSK 1 (150 Kata) ---
+      ["HSK1", 1, "我", "wǒ", "saya, aku", "我是学生。", "Wǒ shì xuéshēng.", "Saya adalah murid."],
+      ["HSK1", 2, "我们", "wǒmen", "kami, kita", "我们去学校。", "Wǒmen qù xuéxiào.", "Kami pergi ke sekolah."],
+      ["HSK1", 3, "你", "nǐ", "kamu, Anda", "你好吗？", "Nǐ hǎo ma?", "Apa kabarmu?"],
+      ["HSK1", 4, "他", "tā", "dia (laki-laki)", "他是我的老师。", "Tā shì wǒ de lǎoshī.", "Dia adalah guru saya."],
+      ["HSK1", 5, "她", "tā", "dia (perempuan)", "她很漂亮。", "Tā hěn piàoliang.", "Dia sangat cantik."],
+      ["HSK1", 6, "这(这儿)", "zhè (zhèr)", "ini (di sini)", "这是我的书。", "Zhè shì wǒ de shū.", "Ini adalah buku saya."],
+      ["HSK1", 7, "那(那儿)", "nà (nàr)", "itu (di sana)", "那儿有商店。", "Nàr yǒu shāngdiàn.", "Di sana ada toko."],
+      ["HSK1", 8, "哪", "nǎ", "yang mana", "你是哪国人？", "Nǐ shì nǎ guó rén?", "Kamu orang negara mana?"],
+      ["HSK1", 9, "哪儿", "nǎr", "di mana", "你去哪儿？", "Nǐ qù nǎr?", "Kamu pergi ke mana?"],
+      ["HSK1", 10, "谁", "shéi", "siapa", "他是谁？", "Tā shì shéi?", "Siapa dia?"],
+      ["HSK1", 11, "什么", "shénme", "apa", "你叫什么名字？", "Nǐ jiào shénme míngzi?", "Siapa namamu?"],
+      ["HSK1", 12, "多少", "duōshao", "berapa banyak", "这个杯子多少钱？", "Zhège bēizi duōshao qián?", "Berapa harga gelas ini?"],
+      ["HSK1", 13, "几", "jǐ", "berapa (jumlah sedikit)", "你几岁了？", "Nǐ jǐ suì le?", "Berapa umurmu?"],
+      ["HSK1", 14, "怎么", "zěnme", "bagaimana", "这个字怎么读？", "Zhège zì zěnme dú?", "Bagaimana cara membaca huruf ini?"],
+      ["HSK1", 15, "怎么样", "zěnmeyàng", "bagaimana kabarnya/pendapatnya", "今天天气怎么样？", "Jīntiān tiānqì zěnmeyàng?", "Bagaimana cuaca hari ini?"],
+      ["HSK1", 16, "一", "yī", "satu", "我有一个苹果。", "Wǒ yǒu yī gè píngguǒ.", "Saya punya satu buah apel."],
+      ["HSK1", 17, "二", "èr", "dua", "现在两点零二分。", "Xiànzài liǎng diǎn líng èr fēn.", "Sekarang pukul dua lewat dua menit."],
+      ["HSK1", 18, "三", "sān", "tiga", "我家有三个人。", "Wǒ jiā yǒu sān gè rén.", "Keluarga saya ada tiga orang."],
+      ["HSK1", 19, "四", "sì", "empat", "四月天气很好。", "Sì yuè tiānqì hěn hǎo.", "Cuaca bulan April sangat bagus."],
+      ["HSK1", 20, "五", "wǔ", "lima", "今天星期五。", "Jīntiān xīngqīwǔ.", "Hari ini hari Jumat."],
+      ["HSK1", 21, "六", "liù", "enam", "桌子上有六个杯子。", "Zhuōzi shàng yǒu liù gè bēizi.", "Di atas meja ada enam gelas."],
+      ["HSK1", 22, "七", "qī", "tujuh", "我七点起床。", "Wǒ qī diǎn qǐchuáng.", "Saya bangun tidur jam tujuh."],
+      ["HSK1", 23, "八", "bā", "delapan", "他八岁了。", "Tā bā suì le.", "Dia berumur delapan tahun."],
+      ["HSK1", 24, "九", "jiǔ", "sembilan", "九月我去北京。", "Jiǔ yuè wǒ qù Běijīng.", "Bulan September saya pergi ke Beijing."],
+      ["HSK1", 25, "十", "shí", "sepuluh", "我有十块钱。", "Wǒ yǒu shí kuài qián.", "Saya punya uang sepuluh yuan."],
+      ["HSK1", 26, "个", "gè", "kata satuan umum (buah/orang)", "他是一个好人。", "Tā shì yī gè hǎo rén.", "Dia adalah orang yang baik."],
+      ["HSK1", 27, "岁", "suì", "tahun (umur)", "我今年二十岁。", "Wǒ jīnnián èrshí suì.", "Tahun ini umur saya 20 tahun."],
+      ["HSK1", 28, "本", "běn", "jilid, eksemplar (satuan buku)", "这是一本汉语书。", "Zhè shì yī běn Hànyǔ shū.", "Ini adalah sebuah buku bahasa Mandarin."],
+      ["HSK1", 29, "些", "xiē", "beberapa", "我想买一些水果。", "Wǒ xiǎng mǎi yīxiē shuǐguǒ.", "Saya ingin membeli beberapa buah."],
+      ["HSK1", 30, "块", "kuài", "potong, yuan (satuan mata uang)", "这本书三十块钱。", "Zhè běn shū sānshí kuài qián.", "Buku ini harganya 30 yuan."],
+      ["HSK1", 31, "不", "bù", "tidak", "我不喝茶。", "Wǒ bù hē chá.", "Saya tidak minum teh."],
+      ["HSK1", 32, "没", "méi", "tidak (punya) / belum", "我没有钱。", "Wǒ méiyǒu qián.", "Saya tidak punya uang."],
+      ["HSK1", 33, "很", "hěn", "sangat", "我很高兴认识你。", "Wǒ hěn gāoxìng rènshi nǐ.", "Saya sangat senang mengenalmu."],
+      ["HSK1", 34, "太", "tài", "terlalu", "今天太热了！", "Jīntiān tài rè le!", "Hari ini terlalu panas!"],
+      ["HSK1", 35, "都", "dōu", "semua", "我们都是学生。", "Wǒmen dōu shì xuéshēng.", "Kami semua adalah murid."],
+      ["HSK1", 36, "一点儿", "yīdiǎnr", "sedikit", "我会说一点儿汉语。", "Wǒ huì shuō yīdiǎnr Hànyǔ.", "Saya bisa berbicara sedikit bahasa Mandarin."],
+      ["HSK1", 37, "和", "hé", "dan", "爸爸和妈妈都在家。", "Bàba hé māma dōu zài jiā.", "Ayah dan ibu keduanya ada di rumah."],
+      ["HSK1", 38, "在", "zài", "di, berada di / sedang", "小猫在椅子下面。", "Xiǎo māo zài yǐzi xiàmiàn.", "Kucing kecil ada di bawah kursi."],
+      ["HSK1", 39, "的", "de", "milik, kepunyaan (partikel)", "这是妈妈的衣服。", "Zhè shì māma de yīfu.", "Ini adalah pakaian ibu."],
+      ["HSK1", 40, "了", "le", "sudah (partikel perubahan)", "我吃饭了。", "Wǒ chīfàn le.", "Saya sudah makan."],
+      ["HSK1", 41, "吗", "ma", "apakah (partikel tanya)", "你喜欢喝茶吗？", "Nǐ xǐhuan hē chá ma?", "Apakah kamu suka minum teh?"],
+      ["HSK1", 42, "呢", "ne", "bagaimana dengan... (partikel)", "我很好，你呢？", "Wǒ hěn hǎo, nǐ ne?", "Saya baik-baik saja, bagaimana denganmu?"],
+      ["HSK1", 43, "喂", "wèi", "halo (saat menelepon)", "喂，请问李老师在吗？", "Wèi, qǐngwèn Lǐ lǎoshī zài ma?", "Halo, permisi apakah Guru Li ada?"],
+      ["HSK1", 44, "家", "jiā", "rumah, keluarga", "我下午回家。", "Wǒ xiàwǔ huí jiā.", "Saya pulang ke rumah sore hari."],
+      ["HSK1", 45, "学校", "xuéxiào", "sekolah", "我们的学校很大。", "Wǒmen de xuéxiào hěn dà.", "Sekolah kami sangat besar."],
+      ["HSK1", 46, "饭店", "fàndiàn", "restoran, hotel", "中午我们去饭店吃饭。", "Zhōngwǔ wǒmen qù fàndiàn chīfàn.", "Siang ini kami pergi makan di restoran."],
+      ["HSK1", 47, "商店", "shāngdiàn", "toko", "她去商店买东西。", "Tā qù shāngdiàn mǎi dōngxi.", "Dia pergi ke toko membeli barang."],
+      ["HSK1", 48, "医院", "yīyuàn", "rumah sakit", "医生在医院工作。", "Yīshēng zài yīyuàn gōngzuò.", "Dokter bekerja di rumah sakit."],
+      ["HSK1", 49, "中国", "Zhōngguó", "Tiongkok, China", "我想去中国学习。", "Wǒ xiǎng qù Zhōngguó xuéxí.", "Saya ingin pergi ke Tiongkok untuk belajar."],
+      ["HSK1", 50, "北京", "Běijīng", "Beijing", "北京是中国的首都。", "Běijīng shì Zhōngguó de shǒudū.", "Beijing adalah ibu kota Tiongkok."],
+      ["HSK1", 51, "上", "shàng", "atas, naik", "书在桌子上。", "Shū zài zhuōzi shàng.", "Buku ada di atas meja."],
+      ["HSK1", 52, "下", "xià", "bawah, turun", "请坐下喝茶。", "Qǐng zuò xià hē chá.", "Silakan duduk dan minum teh."],
+      ["HSK1", 53, "前面", "qiánmiàn", "depan", "学校前面有商店。", "Xuéxiào qiánmiàn yǒu shāngdiàn.", "Di depan sekolah ada toko."],
+      ["HSK1", 54, "后面", "hòumiàn", "belakang", "他在我后面。", "Tā zài wǒ hòumiàn.", "Dia berada di belakang saya."],
+      ["HSK1", 55, "里", "lǐ", "dalam", "杯子里有水。", "Bēizi lǐ yǒu shuǐ.", "Di dalam gelas ada air."],
+      ["HSK1", 56, "今天", "jīntiān", "hari ini", "今天我很忙。", "Jīntiān wǒ hěn máng.", "Hari ini saya sangat sibuk."],
+      ["HSK1", 57, "明天", "míngtiān", "besok", "明天我们去看电影。", "Míngtiān wǒmen qù kàn diànyǐng.", "Besok kita pergi menonton film."],
+      ["HSK1", 58, "昨天", "zuótiān", "kemarin", "昨天下雨了。", "Zuótiān xià yǔ le.", "Kemarin turun hujan."],
+      ["HSK1", 59, "上午", "shàngwǔ", "pagi menjelang siang", "上午我在家看书。", "Shàngwǔ wǒ zài jiā kànshū.", "Pagi hari saya membaca buku di rumah."],
+      ["HSK1", 60, "中午", "zhōngwǔ", "siang hari", "中午十二点吃米饭。", "Zhōngwǔ shí'èr diǎn chī mǐfàn.", "Jam 12 siang makan nasi."],
+      ["HSK1", 61, "下午", "xiàwǔ", "sore hari", "下午三点我有课。", "Xiàwǔ sān diǎn wǒ yǒu kè.", "Jam 3 sore saya ada kelas."],
+      ["HSK1", 62, "年", "nián", "tahun", "我在中国住了两年。", "Wǒ zài Zhōngguó zhù le liǎng nián.", "Saya tinggal di Tiongkok selama dua tahun."],
+      ["HSK1", 63, "月", "yuè", "bulan", "一年有十二个月。", "Yī nián yǒu shí'èr gè yuè.", "Satu tahun ada dua belas bulan."],
+      ["HSK1", 64, "号", "hào", "tanggal, nomor", "今天五月八号。", "Jīntiān wǔ yuè bā hào.", "Hari ini tanggal 8 Mei."],
+      ["HSK1", 65, "星期", "xīngqī", "minggu, pekan", "明天星期一。", "Míngtiān xīngqīyī.", "Besok hari Senin."],
+      ["HSK1", 66, "点", "diǎn", "jam, pukul", "现在上午九点。", "Xiànzài shàngwǔ jiǔ diǎn.", "Sekarang pukul 9 pagi."],
+      ["HSK1", 67, "分钟", "fēnzhōng", "menit", "我等了十分钟。", "Wǒ děng le shí fēnzhōng.", "Saya sudah menunggu sepuluh menit."],
+      ["HSK1", 68, "现在", "xiànzài", "sekarang", "你现在在做什么？", "Nǐ xiànzài zài zuò shénme?", "Apa yang sedang kamu lakukan sekarang?"],
+      ["HSK1", 69, "时候", "shíhou", "waktu, saat", "你什么时候回家？", "Nǐ shénme shíhou huí jiā?", "Kapan kamu pulang ke rumah?"],
+      ["HSK1", 70, "爸爸", "bàba", "ayah", "我爸爸是医生。", "Wǒ bàba shì yīshēng.", "Ayah saya adalah dokter."],
+      ["HSK1", 71, "妈妈", "māma", "ibu", "妈妈做的菜很好吃。", "Māma zuò de cài hěn hǎochī.", "Masakan yang dibuat ibu sangat enak."],
+      ["HSK1", 72, "儿子", "érzi", "anak laki-laki", "他有一个儿子。", "Tā yǒu yī gè érzi.", "Dia memiliki satu anak laki-laki."],
+      ["HSK1", 73, "女儿", "nǚ'ér", "anak perempuan", "她女儿很可爱。", "Tā nǚ'ér hěn kě'ài.", "Anak perempuannya sangat lucu."],
+      ["HSK1", 74, "老师", "lǎoshī", "guru", "王老师教我们汉语。", "Wáng lǎoshī jiāo wǒmen Hànyǔ.", "Guru Wang mengajar kami bahasa Mandarin."],
+      ["HSK1", 75, "学生", "xuéshēng", "murid, siswa", "学校里有很多学生。", "Xuéxiào lǐ yǒu hěn duō xuéshēng.", "Di dalam sekolah ada banyak murid."],
+      ["HSK1", 76, "同学", "tóngxué", "teman sekelas", "他是我的中国同学。", "Tā shì wǒ de Zhōngguó tóngxué.", "Dia adalah teman sekelas Tiongkok saya."],
+      ["HSK1", 77, "朋友", "péngyou", "teman", "我有很多好朋友。", "Wǒ yǒu hěn duō hǎo péngyou.", "Saya punya banyak teman baik."],
+      ["HSK1", 78, "医生", "yīshēng", "dokter", "生病了要去看医生。", "Shēngbìng le yào qù kàn yīshēng.", "Kalau sakit harus pergi periksa ke dokter."],
+      ["HSK1", 79, "先生", "xiānsheng", "tuan, bapak", "张先生不在办公室。", "Zhāng xiānsheng bù zài bàngōngshì.", "Tuan Zhang tidak ada di kantor."],
+      ["HSK1", 80, "小姐", "xiǎojiě", "nona, mbak", "李小姐很漂亮。", "Lǐ xiǎojiě hěn piàoliang.", "Nona Li sangat cantik."],
+      ["HSK1", 81, "衣服", "yīfu", "pakaian, baju", "我想买一件新衣服。", "Wǒ xiǎng mǎi yī jiàn xīn yīfu.", "Saya ingin membeli sehelai baju baru."],
+      ["HSK1", 82, "水", "shuǐ", "air", "请给我一杯水。", "Qǐng gěi wǒ yī bēi shuǐ.", "Tolong beri saya segelas air."],
+      ["HSK1", 83, "菜", "cài", "masakan, sayur", "你喜欢吃中国菜吗？", "Nǐ xǐhuan chī Zhōngguó cài ma?", "Apakah kamu suka makan masakan Tiongkok?"],
+      ["HSK1", 84, "米饭", "mǐfàn", "nasi", "我每天中午吃米饭。", "Wǒ měitiān zhōngwǔ chī mǐfàn.", "Saya makan nasi setiap siang."],
+      ["HSK1", 85, "水果", "shuǐguǒ", "buah-buahan", "多吃水果对身体好。", "Duō chī shuǐguǒ duì shēntǐ hǎo.", "Banyak makan buah baik untuk kesehatan."],
+      ["HSK1", 86, "苹果", "píngguǒ", "apel", "这个苹果很大。", "Zhège píngguǒ hěn dà.", "Apel ini sangat besar."],
+      ["HSK1", 87, "茶", "chá", "teh", "中国人喜欢喝茶。", "Zhōngguórén xǐhuan hē chá.", "Orang Tiongkok suka minum teh."],
+      ["HSK1", 88, "杯子", "bēizi", "gelas, cangkir", "这是我的茶杯子。", "Zhè shì wǒ de chá bēizi.", "Ini adalah cangkir teh saya."],
+      ["HSK1", 89, "钱", "qián", "uang", "你带钱了吗？", "Nǐ dài qián le ma?", "Apakah kamu membawa uang?"],
+      ["HSK1", 90, "飞机", "fēijī", "pesawat terbang", "我们坐飞机去中国。", "Wǒmen zuò fēijī qù Zhōngguó.", "Kami naik pesawat pergi ke Tiongkok."],
+      ["HSK1", 91, "出租车", "chūzūchē", "taksi", "我坐出租车去机场。", "Wǒ zuò chūzūchē qù jīchǎng.", "Saya naik taksi pergi ke bandara."],
+      ["HSK1", 92, "电视", "diànshì", "televisi", "爸爸在看电视。", "Bàba zài kàn diànshì.", "Ayah sedang menonton televisi."],
+      ["HSK1", 93, "电脑", "diànnǎo", "komputer", "我用电脑学习汉语。", "Wǒ yòng diànnǎo xuéxí Hànyǔ.", "Saya memakai komputer untuk belajar Mandarin."],
+      ["HSK1", 94, "电影", "diànyǐng", "film", "这个电影很好看。", "Zhège diànyǐng hěn hǎokàn.", "Film ini sangat bagus ditonton."],
+      ["HSK1", 95, "天气", "tiānqì", "cuaca", "今天天气很冷。", "Jīntiān tiānqì hěn lěng.", "Cuaca hari ini sangat dingin."],
+      ["HSK1", 96, "猫", "māo", "kucing", "我有一只小猫。", "Wǒ yǒu yī zhī xiǎo māo.", "Saya punya seekor kucing kecil."],
+      ["HSK1", 97, "狗", "gǒu", "anjing", "那只小狗很可爱。", "Nà zhī xiǎo gǒu hěn kě'ài.", "Anjing kecil itu sangat lucu."],
+      ["HSK1", 98, "东西", "dōngxi", "barang, benda", "商店里有很多东西。", "Shāngdiàn lǐ yǒu hěn duō dōngxi.", "Di dalam toko ada banyak barang."],
+      ["HSK1", 99, "人", "rén", "orang", "那里有很多人。", "Nàlǐ yǒu hěn duō rén.", "Di sana ada banyak orang."],
+      ["HSK1", 100, "名字", "míngzi", "nama", "我的名字叫大卫。", "Wǒ de míngzi jiào Dàwèi.", "Nama saya adalah David."],
+      ["HSK1", 101, "书", "shū", "buku", "我喜欢看书。", "Wǒ xǐhuan kànshū.", "Saya suka membaca buku."],
+      ["HSK1", 102, "汉语", "Hànyǔ", "bahasa Mandarin", "汉语很有意思。", "Hànyǔ hěn yǒuyìsi.", "Bahasa Mandarin sangat menarik."],
+      ["HSK1", 103, "字", "zì", "huruf, karakter", "你会写这个汉字吗？", "Nǐ huì xiě zhège Hànzì ma?", "Bisakah kamu menulis karakter Mandarin ini?"],
+      ["HSK1", 104, "桌子", "zhuōzi", "meja", "电脑在桌子上。", "Diànnǎo zài zhuōzi shàng.", "Komputer ada di atas meja."],
+      ["HSK1", 105, "椅子", "yǐzi", "kursi", "请坐在椅子上。", "Qǐng zuò zài yǐzi shàng.", "Silakan duduk di atas kursi."],
+      ["HSK1", 106, "谢谢", "xièxie", "terima kasih", "谢谢你的帮助！", "Xièxie nǐ de bāngzhù!", "Terima kasih atas bantuanmu!"],
+      ["HSK1", 107, "不客气", "bú kèqi", "sama-sama", "不客气，这是应该的。", "Bú kèqi, zhè shì yīnggāi de.", "Sama-sama, ini sudah semestinya."],
+      ["HSK1", 108, "再见", "zàijiàn", "sampai jumpa", "老师再见，明天见！", "Lǎoshī zàijiàn, míngtiān jiàn!", "Sampai jumpa guru, sampai ketemu besok!"],
+      ["HSK1", 109, "请", "qǐng", "silakan, mohon", "请进，请坐！", "Qǐng jìn, qǐng zuò!", "Silakan masuk, silakan duduk!"],
+      ["HSK1", 110, "对不起", "duìbuqǐ", "maaf", "对不起，我来晚了。", "Duìbuqǐ, wǒ lái wǎn le.", "Maaf, saya datang terlambat."],
+      ["HSK1", 111, "没关系", "méi guānxi", "tidak apa-apa", "没关系，别担心。", "Méi guānxi, bié dānxīn.", "Tidak apa-apa, jangan khawatir."],
+      ["HSK1", 112, "是", "shì", "adalah", "他是我的朋友。", "Tā shì wǒ de péngyou.", "Dia adalah teman saya."],
+      ["HSK1", 113, "有", "yǒu", "ada, punya", "你有汉语词典吗？", "Nǐ yǒu Hànyǔ cídiǎn ma?", "Apakah kamu punya kamus Mandarin?"],
+      ["HSK1", 114, "看", "kàn", "melihat, menonton, membaca", "我在看报纸。", "Wǒ zài kàn bàozhǐ.", "Saya sedang membaca koran."],
+      ["HSK1", 115, "听", "tīng", "mendengar", "我喜欢听音乐。", "Wǒ xǐhuan tīng yīnyuè.", "Saya suka mendengarkan musik."],
+      ["HSK1", 116, "说", "shuō", "berbicara", "请慢一点儿说。", "Qǐng màn yīdiǎnr shuō.", "Tolong bicaralah sedikit lebih pelan."],
+      ["HSK1", 117, "读", "dú", "membaca (bersuara)", "请跟我一起读。", "Qǐng gēn wǒ yīqǐ dú.", "Silakan baca bersama saya."],
+      ["HSK1", 118, "写", "xiě", "menulis", "我在写作业。", "Wǒ zài xiě zuòyè.", "Saya sedang menulis PR."],
+      ["HSK1", 119, "看见", "kànjiàn", "melihat, terlihat", "我看见他去商店了。", "Wǒ kànjiàn tā qù shāngdiàn le.", "Saya melihat dia pergi ke toko."],
+      ["HSK1", 120, "叫", "jiào", "bernama, memanggil", "我叫安娜。", "Wǒ jiào Ānnà.", "Nama saya Anna."],
+      ["HSK1", 121, "来", "lái", "datang", "欢迎你来我家。", "Huānyíng nǐ lái wǒ jiā.", "Selamat datang ke rumah saya."],
+      ["HSK1", 122, "回", "huí", "pulang, kembali", "你几点回家？", "Nǐ jǐ diǎn huí jiā?", "Jam berapa kamu pulang ke rumah?"],
+      ["HSK1", 123, "去", "qù", "pergi", "我明天去北京。", "Wǒ míngtiān qù Běijīng.", "Besok saya pergi ke Beijing."],
+      ["HSK1", 124, "吃", "chī", "makan", "你想吃什么？", "Nǐ xiǎng chī shénme?", "Kamu ingin makan apa?"],
+      ["HSK1", 125, "喝", "hē", "minum", "我每天喝很多水。", "Wǒ měitiān hē hěn duō shuǐ.", "Saya minum banyak air setiap hari."],
+      ["HSK1", 126, "睡觉", "shuìjiào", "tidur", "晚上十一点我睡觉。", "Wǎnshang shíyī diǎn wǒ shuìjiào.", "Jam 11 malam saya tidur."],
+      ["HSK1", 127, "打电话", "dǎ diànhuà", "menelepon", "我在给妈妈打电话。", "Wǒ zài gěi māma dǎ diànhuà.", "Saya sedang menelepon ibu."],
+      ["HSK1", 128, "做", "zuò", "melakukan, membuat", "你在做什么呢？", "Nǐ zài zuò shénme ne?", "Apa yang sedang kamu kerjakan?"],
+      ["HSK1", 129, "买", "mǎi", "membeli", "我去商店买苹果。", "Wǒ qù shāngdiàn mǎi píngguǒ.", "Saya pergi ke toko membeli apel."],
+      ["HSK1", 130, "开", "kāi", "membuka, menyetir", "请开门。", "Qǐng kāi mén.", "Tolong buka pintunya."],
+      ["HSK1", 131, "坐", "zuò", "duduk, naik kendaraan", "我坐公共汽车去学校。", "Wǒ zuò gōnggòng qìchē qù xuéxiào.", "Saya naik bus pergi ke sekolah."],
+      ["HSK1", 132, "住", "zhù", "tinggal", "你住在哪里？", "Nǐ zhù zài nǎlǐ?", "Di mana kamu tinggal?"],
+      ["HSK1", 133, "学习", "xuéxí", "belajar", "我每天学习汉语。", "Wǒ měitiān xuéxí Hànyǔ.", "Saya belajar bahasa Mandarin setiap hari."],
+      ["HSK1", 134, "工作", "gōngzuò", "bekerja, pekerjaan", "他在银行工作。", "Tā zài yínháng gōngzuò.", "Dia bekerja di bank."],
+      ["HSK1", 135, "下雨", "xià yǔ", "turun hujan", "外面下雨了，带伞吧。", "Wàimiàn xià yǔ le, dài sǎn ba.", "Di luar turun hujan, bawalah payung."],
+      ["HSK1", 136, "爱", "ài", "cinta, sayang", "我爱我的爸爸妈妈。", "Wǒ ài wǒ de bàba māma.", "Saya menyayangi ayah dan ibu saya."],
+      ["HSK1", 137, "喜欢", "xǐhuan", "suka", "我喜欢吃西瓜。", "Wǒ xǐhuan chī xīguā.", "Saya suka makan semangka."],
+      ["HSK1", 138, "想", "xiǎng", "ingin, berpikir, rindu", "我想喝一杯咖啡。", "Wǒ xiǎng hē yī bēi kāfēi.", "Saya ingin minum secangkir kopi."],
+      ["HSK1", 139, "认识", "rènshi", "kenal", "我认识那位老师。", "Wǒ rènshi nà wèi lǎoshī.", "Saya kenal guru itu."],
+      ["HSK1", 140, "会", "huì", "bisa (keterampilan), akan", "我会游泳。", "Wǒ huì yóuyǒng.", "Saya bisa berenang."],
+      ["HSK1", 141, "能", "néng", "bisa, mampu", "你明天能来吗？", "Nǐ míngtiān néng lái ma?", "Bisakah kamu datang besok?"],
+      ["HSK1", 142, "好", "hǎo", "baik, bagus", "你身体好吗？", "Nǐ shēntǐ hǎo ma?", "Apakah kesehatanmu baik?"],
+      ["HSK1", 143, "大", "dà", "besar", "这个房间很大。", "Zhège fángjiān hěn dà.", "Kamar ini sangat besar."],
+      ["HSK1", 144, "小", "xiǎo", "kecil", "这只小猫很可爱。", "Zhè zhī xiǎo māo hěn kě'ài.", "Kucing kecil ini sangat menggemaskan."],
+      ["HSK1", 145, "多", "duō", "banyak", "今天人很多。", "Jīntiān rén hěn duō.", "Hari ini orangnya sangat banyak."],
+      ["HSK1", 146, "少", "shǎo", "sedikit", "这里人很少。", "Zhèlǐ rén hěn shǎo.", "Di sini orangnya sangat sedikit."],
+      ["HSK1", 147, "冷", "lěng", "dingin", "冬天很冷。", "Dōngtiān hěn lěng.", "Musim dingin sangat dingin."],
+      ["HSK1", 148, "热", "rè", "panas", "夏天的天气很热。", "Xiàtiān de tiānqì hěn rè.", "Cuaca musim panas sangat panas."],
+      ["HSK1", 149, "高兴", "gāoxìng", "senang, gembira", "见到你我很高兴。", "Jiàndào nǐ wǒ hěn gāoxìng.", "Bertemu denganmu saya sangat senang."],
+      ["HSK1", 150, "漂亮", "piàoliang", "cantik, indah", "你的衣服真漂亮！", "Nǐ de yīfu zhēn piàoliang!", "Bajumu sungguh cantik!"],
+
+      // --- HSK 2 (150 Kata) ---
+      ["HSK2", 1, "您", "nín", "Anda (bentuk sopan)", "您好，请问您贵姓？", "Nín hǎo, qǐngwèn nín guìxìng?", "Halo Anda, permisi siapa marga Anda?"],
+      ["HSK2", 2, "它", "tā", "ia / dia (benda/hewan)", "我有一只猫，它很可爱。", "Wǒ yǒu yī zhī māo, tā hěn kě'ài.", "Saya punya seekor kucing, ia sangat lucu."],
+      ["HSK2", 3, "大家", "dàjiā", "semua orang, semuanya", "大家好，我来介绍一下。", "Dàjiā hǎo, wǒ lái jièshào yīxià.", "Halo semuanya, izinkan saya memperkenalkan diri."],
+      ["HSK2", 4, "每", "měi", "setiap", "我每天早上跑步。", "Wǒ měitiān zǎoshang pǎobù.", "Saya berlari setiap pagi."],
+      ["HSK2", 5, "为什么", "wèishénme", "mengapa, kenapa", "你今天为什么不高兴？", "Nǐ jīntiān wèishénme bù gāoxìng?", "Mengapa hari ini kamu tidak senang?"],
+      ["HSK2", 6, "零", "líng", "nol", "今天气温零度。", "Jīntiān qìwēn líng dù.", "Suhu hari ini nol derajat."],
+      ["HSK2", 7, "两", "liǎng", "dua (untuk jumlah/satuan)", "我买了两个苹果。", "Wǒ mǎi le liǎng gè píngguǒ.", "Saya membeli dua buah apel."],
+      ["HSK2", 8, "百", "bǎi", "ratus", "这件衣服两百块钱。", "Zhè jiàn yīfu liǎng bǎi kuài qián.", "Baju ini harganya dua ratus yuan."],
+      ["HSK2", 9, "千", "qiān", "ribu", "这个手机三千块。", "Zhège shǒujī sān qiān kuài.", "Ponsel ini harganya tiga ribu yuan."],
+      ["HSK2", 10, "第一", "dì-yī", "pertama", "这是我第一次来中国。", "Zhè shì wǒ dì-yī cì lái Zhōngguó.", "Ini pertama kalinya saya datang ke Tiongkok."],
+      ["HSK2", 11, "次", "cì", "kali (frekuensi)", "我去过三次北京。", "Wǒ qù guo sān cì Běijīng.", "Saya pernah pergi ke Beijing tiga kali."],
+      ["HSK2", 12, "件", "jiàn", "helai, potong (baju/urusan)", "这件衬衫很漂亮。", "Zhè jiàn chènshān hěn piàoliang.", "Kemeja ini sangat bagus."],
+      ["HSK2", 13, "别", "bié", "jangan", "别说话，老师来了。", "Bié shuōhuà, lǎoshī lái le.", "Jangan bicara, guru sudah datang."],
+      ["HSK2", 14, "非常", "fēicháng", "sangat, luar biasa", "这里的风景非常美。", "Zhèlǐ de fēngjǐng fēicháng měi.", "Pemandangan di sini sangat indah."],
+      ["HSK2", 15, "也", "yě", "juga", "我也是印尼人。", "Wǒ yě shì Yìnní rén.", "Saya juga orang Indonesia."],
+      ["HSK2", 16, "还", "hái", "masih, juga", "现在十点了，他还在工作。", "Xiànzài shí diǎn le, tā hái zài gōngzuò.", "Sekarang sudah jam 10, dia masih bekerja."],
+      ["HSK2", 17, "最", "zuì", "paling", "我最喜欢吃面条。", "Wǒ zuì xǐhuan chī miàntiáo.", "Saya paling suka makan mi."],
+      ["HSK2", 18, "真", "zhēn", "sungguh, benar-benar", "今天的菜真好吃！", "Jīntiān de cài zhēn hǎochī!", "Masakan hari ini sungguh lezat!"],
+      ["HSK2", 19, "正在", "zhèngzài", "sedang (berlangsung)", "弟弟正在看电视。", "Dìdi zhèngzài kàn diànshì.", "Adik laki-laki sedang menonton TV."],
+      ["HSK2", 20, "已经", "yǐjīng", "sudah", "我已经吃完饭了。", "Wǒ yǐjīng chī wán fàn le.", "Saya sudah selesai makan."],
+      ["HSK2", 21, "一起", "yīqǐ", "bersama-sama", "我们一起去旅游吧。", "Wǒmen yīqǐ qù lǚyóu ba.", "Ayo kita pergi berwisata bersama."],
+      ["HSK2", 22, "再", "zài", "lagi (di masa depan)", "请再说一遍。", "Qǐng zài shuō yī biàn.", "Tolong katakan sekali lagi."],
+      ["HSK2", 23, "就", "jiù", "langsung, segera, maka", "我吃饱了就去睡觉。", "Wǒ chī bǎo le jiù qù shuìjiào.", "Setelah kenyang saya langsung tidur."],
+      ["HSK2", 24, "因为……所以……", "yīnwèi...suǒyǐ...", "karena... maka...", "因为下雨，所以我没去。", "Yīnwèi xià yǔ, suǒyǐ wǒ méi qù.", "Karena hujan, maka saya tidak pergi."],
+      ["HSK2", 25, "虽然……但是……", "suīrán...dànshì...", "walaupun... tetapi...", "虽然很累，但是很高兴。", "Suīrán hěn lèi, dànshì hěn gāoxìng.", "Walaupun sangat lelah, tetapi sangat senang."],
+      ["HSK2", 26, "从", "cóng", "dari", "我从家走到学校。", "Wǒ cóng jiā zǒu dào xuéxiào.", "Saya berjalan kaki dari rumah ke sekolah."],
+      ["HSK2", 27, "比", "bǐ", "dibandingkan dengan", "哥哥比我高。", "Gēge bǐ wǒ gāo.", "Kakak laki-laki lebih tinggi daripada saya."],
+      ["HSK2", 28, "往", "wǎng", "ke arah, menuju", "往前走就是火车站。", "Wǎng qián zǒu jiù shì huǒchēzhàn.", "Jalan ke depan adalah stasiun kereta."],
+      ["HSK2", 29, "离", "lí", "berjarak dari", "我家离公司很近。", "Wǒ jiā lí gōngsī hěn jìn.", "Rumah saya sangat dekat dari kantor."],
+      ["HSK2", 30, "得", "de", "partikel pelengkap kata kerja", "他跑得很快。", "Tā pǎo de hěn kuài.", "Dia berlari dengan sangat cepat."],
+      ["HSK2", 31, "着", "zhe", "sedang (keadaan berlangsung)", "门开着呢。", "Mén kāi zhe ne.", "Pintunya sedang terbuka."],
+      ["HSK2", 32, "过", "guo", "pernah (pengalaman)", "我吃过北京烤鸭。", "Wǒ chī guo Běijīng kǎoyā.", "Saya pernah makan bebek panggang Beijing."],
+      ["HSK2", 33, "吧", "ba", "partikel ajakan/saran", "我们走吧！", "Wǒmen zǒu ba!", "Ayo kita berangkat!"],
+      ["HSK2", 34, "机场", "jīchǎng", "bandara", "我去机场接朋友。", "Wǒ qù jīchǎng jiē péngyou.", "Saya pergi ke bandara menjemput teman."],
+      ["HSK2", 35, "教室", "jiàoshì", "ruang kelas", "学生在教室里上课。", "Xuéshēng zài jiàoshì lǐ shàngkè.", "Murid-murid belajar di dalam ruang kelas."],
+      ["HSK2", 36, "房间", "fángjiān", "kamar, ruangan", "我的房间很干净。", "Wǒ de fángjiān hěn gānjìng.", "Kamar saya sangat bersih."],
+      ["HSK2", 37, "路", "lù", "jalan", "这条路很长。", "Zhè tiáo lù hěn cháng.", "Jalan ini sangat panjang."],
+      ["HSK2", 38, "左边", "zuǒbiān", "sebelah kiri", "银行在商店的左边。", "Yínháng zài shāngdiàn de zuǒbiān.", "Bank berada di sebelah kiri toko."],
+      ["HSK2", 39, "右边", "yòubiān", "sebelah kanan", "我家右边是公园。", "Wǒ jiā yòubiān shì gōngyuán.", "Sebelah kanan rumah saya adalah taman."],
+      ["HSK2", 40, "外", "wài", "luar", "门外有人找你。", "Mén wài yǒu rén zhǎo nǐ.", "Di luar pintu ada orang mencarimu."],
+      ["HSK2", 41, "旁边", "pángbiān", "sebelah, samping", "他坐在我旁边。", "Tā zuò zài wǒ pángbiān.", "Dia duduk di sebelah saya."],
+      ["HSK2", 42, "一下", "yīxià", "sebentar", "请等我一下。", "Qǐng děng wǒ yīxià.", "Tolong tunggu saya sebentar."],
+      ["HSK2", 43, "早上", "zǎoshang", "pagi hari", "早上好！", "Zǎoshang hǎo!", "Selamat pagi!"],
+      ["HSK2", 44, "晚上", "wǎnshang", "malam hari", "晚上我喜欢看书。", "Wǎnshang wǒ xǐhuan kànshū.", "Malam hari saya suka membaca buku."],
+      ["HSK2", 45, "小时", "xiǎoshí", "jam (durasi)", "我每天学习两个小时。", "Wǒ měitiān xuéxí liǎng gè xiǎoshí.", "Saya belajar dua jam setiap hari."],
+      ["HSK2", 46, "时间", "shíjiān", "waktu", "你周末有时间吗？", "Nǐ zhōumò yǒu shíjiān ma?", "Apakah kamu punya waktu akhir pekan ini?"],
+      ["HSK2", 47, "去年", "qùnián", "tahun lalu", "去年我去过日本。", "Qùnián wǒ qù guo Rìběn.", "Tahun lalu saya pernah pergi ke Jepang."],
+      ["HSK2", 48, "日", "rì", "tanggal, hari", "今天是十月一日。", "Jīntiān shì shí yuè yī rì.", "Hari ini tanggal 1 Oktober."],
+      ["HSK2", 49, "生日", "shēngrì", "ulang tahun", "祝你生日快乐！", "Zhù nǐ shēngrì kuàilè!", "Selamat ulang tahun untukmu!"],
+      ["HSK2", 50, "哥哥", "gēge", "kakak laki-laki", "我哥哥在大学学习。", "Wǒ gēge zài dàxué xuéxí.", "Kakak laki-laki saya kuliah di universitas."],
+      ["HSK2", 51, "姐姐", "jiějie", "kakak perempuan", "姐姐比我大三岁。", "Jiějie bǐ wǒ dà sān suì.", "Kakak perempuan lebih tua 3 tahun dari saya."],
+      ["HSK2", 52, "弟弟", "dìdi", "adik laki-laki", "弟弟喜欢踢足球。", "Dìdi xǐhuan tī zúqiú.", "Adik laki-laki suka bermain sepak bola."],
+      ["HSK2", 53, "妹妹", "mèimei", "adik perempuan", "我妹妹在唱歌。", "Wǒ mèimei zài chànggē.", "Adik perempuan saya sedang bernyanyi."],
+      ["HSK2", 54, "丈夫", "zhàngfu", "suami", "她丈夫是公司经理。", "Tā zhàngfu shì gōngsī jīnglǐ.", "Suaminya adalah manajer perusahaan."],
+      ["HSK2", 55, "妻子", "qīzi", "istri", "他非常爱他的妻子。", "Tā fēicháng ài tā de qīzi.", "Dia sangat mencintai istrinya."],
+      ["HSK2", 56, "孩子", "háizi", "anak", "孩子们在公园玩。", "Háizimen zài gōngyuán wán.", "Anak-anak bermain di taman."],
+      ["HSK2", 57, "男人", "nánrén", "pria, laki-laki", "那个男人是谁？", "Nàge nánrén shì shéi?", "Siapa pria itu?"],
+      ["HSK2", 58, "女人", "nǚrén", "wanita, perempuan", "那个女人是我阿姨。", "Nàge nǚrén shì wǒ āyí.", "Wanita itu adalah bibi saya."],
+      ["HSK2", 59, "服务员", "fúwùyuán", "pelayan", "服务员，请给我菜单。", "Fúwùyuán, qǐng gěi wǒ càidān.", "Pelayan, tolong berikan saya menu."],
+      ["HSK2", 60, "鱼", "yú", "ikan", "我喜欢吃鱼。", "Wǒ xǐhuan chī yú.", "Saya suka makan ikan."],
+      ["HSK2", 61, "羊肉", "yángròu", "daging kambing", "这里的羊肉很好吃。", "Zhèlǐ de yángròu hěn hǎochī.", "Daging kambing di sini sangat enak."],
+      ["HSK2", 62, "牛奶", "niúnǎi", "susu sapi", "我每天早上喝牛奶。", "Wǒ měitiān zǎoshang hē niúnǎi.", "Saya minum susu setiap pagi."],
+      ["HSK2", 63, "鸡蛋", "jīdàn", "telur ayam", "早饭我吃了两个鸡蛋。", "Zǎofàn wǒ chī le liǎng gè jīdàn.", "Sarapan saya makan dua butir telur."],
+      ["HSK2", 64, "西瓜", "xīguā", "semangka", "夏天吃西瓜很舒服。", "Xiàtiān chī xīguā hěn shūfu.", "Musim panas makan semangka sangat nyaman."],
+      ["HSK2", 65, "咖啡", "kāfēi", "kopi", "爸爸喜欢喝黑咖啡。", "Bàba xǐhuan hē hēi kāfēi.", "Ayah suka minum kopi hitam."],
+      ["HSK2", 66, "雪", "xuě", "salju", "外面下雪了！", "Wàimiàn xià xuě le!", "Di luar turun salju!"],
+      ["HSK2", 67, "药", "yào", "obat", "生病了要按时吃药。", "Shēngbìng le yào ànshí chī yào.", "Kalau sakit harus minum obat tepat waktu."],
+      ["HSK2", 68, "手机", "shǒujī", "ponsel, HP", "我的手机没电了。", "Wǒ de shǒujī méi diàn le.", "HP saya kehabisan baterai."],
+      ["HSK2", 69, "手表", "shǒubiǎo", "jam tangan", "这块手表很贵。", "Zhè kuài shǒubiǎo hěn guì.", "Jam tangan ini sangat mahal."],
+      ["HSK2", 70, "眼睛", "yǎnjing", "mata", "她的眼睛很大很美。", "Tā de yǎnjing hěn dà hěn měi.", "Matanya sangat besar dan indah."],
+      ["HSK2", 71, "身体", "shēntǐ", "tubuh, kesehatan", "多运动对身体好。", "Duō yùndòng duì shēntǐ hǎo.", "Banyak berolahraga baik untuk tubuh."],
+      ["HSK2", 72, "公共汽车", "gōnggòng qìchē", "bus umum", "我每天坐公共汽车上班。", "Wǒ měitiān zuò gōnggòng qìchē shàngbān.", "Saya naik bus umum pergi kerja setiap hari."],
+      ["HSK2", 73, "报纸", "bàozhǐ", "koran, surat kabar", "爷爷每天早上看报纸。", "Yéye měitiān zǎoshang kàn bàozhǐ.", "Kakek membaca koran setiap pagi."],
+      ["HSK2", 74, "门", "mén", "pintu", "请把门关上。", "Qǐng bǎ mén guān shàng.", "Tolong tutup pintunya."],
+      ["HSK2", 75, "题", "tí", "soal, topik", "这个考试题很简单。", "Zhège kǎoshì tí hěn jiǎndān.", "Soal ujian ini sangat mudah."],
+      ["HSK2", 76, "课", "kè", "pelajaran, kelas", "我们现在上汉语课。", "Wǒmen xiànzài shàng Hànyǔ kè.", "Kami sekarang sedang pelajaran Mandarin."],
+      ["HSK2", 77, "姓", "xìng", "marga, bermarga", "我姓林，叫林娜。", "Wǒ xìng Lín, jiào Lín Nà.", "Marga saya Lin, nama saya Lin Na."],
+      ["HSK2", 78, "问题", "wèntí", "pertanyaan, masalah", "你有问题可以问老师。", "Nǐ yǒu wèntí kěyǐ wèn lǎoshī.", "Kalau ada pertanyaan boleh tanya guru."],
+      ["HSK2", 79, "事情", "shìqing", "urusan, hal", "今天我有很多事情要做。", "Jīntiān wǒ yǒu hěn duō shìqing yào zuò.", "Hari ini saya punya banyak urusan yang harus dikerjakan."],
+      ["HSK2", 80, "考试", "kǎoshì", "ujian", "明天有汉语考试。", "Míngtiān yǒu Hànyǔ kǎoshì.", "Besok ada ujian bahasa Mandarin."],
+      ["HSK2", 81, "票", "piào", "tiket", "我买了两张电影票。", "Wǒ mǎi le liǎng zhāng diànyǐng piào.", "Saya membeli dua lembar tiket bioskop."],
+      ["HSK2", 82, "意思", "yìsi", "arti, makna", "这个词是什么意思？", "Zhège cí shì shénme yìsi?", "Apa arti kata ini?"],
+      ["HSK2", 83, "颜色", "yánsè", "warna", "你喜欢什么颜色？", "Nǐ xǐhuan shénme yánsè?", "Warna apa yang kamu suka?"],
+      ["HSK2", 84, "铅笔", "qiānbǐ", "pensil", "我用铅笔写字。", "Wǒ yòng qiānbǐ xiě zì.", "Saya menulis menggunakan pensil."],
+      ["HSK2", 85, "面条", "miàntiáo", "mi", "我中午吃了一碗面条。", "Wǒ zhōngwǔ chī le yī wǎn miàntiáo.", "Siang ini saya makan semangkuk mi."],
+      ["HSK2", 86, "火车站", "huǒchēzhàn", "stasiun kereta api", "火车站在市中心。", "Huǒchēzhàn zài shì zhōngxīn.", "Stasiun kereta api berada di pusat kota."],
+      ["HSK2", 87, "公司", "gōngsī", "perusahaan", "他在一家大公司工作。", "Tā zài yī jiā dà gōngsī gōngzuò.", "Dia bekerja di sebuah perusahaan besar."],
+      ["HSK2", 88, "宾馆", "bīnguǎn", "hotel", "我们住在这家宾馆。", "Wǒmen zhù zài zhè jiā bīnguǎn.", "Kami menginap di hotel ini."],
+      ["HSK2", 89, "说话", "shuōhuà", "berbicara", "图书馆里不能大声说话。", "Túshūguǎn lǐ bù néng dàshēng shuōhuà.", "Di dalam perpustakaan tidak boleh berbicara keras."],
+      ["HSK2", 90, "卖", "mài", "menjual", "这个商店卖水果。", "Zhège shāngdiàn mài shuǐguǒ.", "Toko ini menjual buah-buahan."],
+      ["HSK2", 91, "问", "wèn", "bertanya", "我想问你一个问题。", "Wǒ xiǎng wèn nǐ yī gè wèntí.", "Saya ingin bertanya satu pertanyaan kepadamu."],
+      ["HSK2", 92, "走", "zǒu", "berjalan, pergi", "我们走路去吧。", "Wǒmen zǒulù qù ba.", "Ayo kita pergi berjalan kaki."],
+      ["HSK2", 93, "进", "jìn", "masuk", "请进屋里坐。", "Qǐng jìn wū lǐ zuò.", "Silakan masuk ke dalam ruangan dan duduk."],
+      ["HSK2", 94, "出", "chū", "keluar", "他刚走出教室。", "Tā gāng zǒu chū jiàoshì.", "Dia baru saja berjalan keluar kelas."],
+      ["HSK2", 95, "跑步", "pǎobù", "berlari, lari pagi", "我每天早上在公园跑步。", "Wǒ měitiān zǎoshang zài gōngyuán pǎobù.", "Saya berlari di taman setiap pagi."],
+      ["HSK2", 96, "到", "dào", "tiba, sampai", "我到学校了。", "Wǒ dào xuéxiào le.", "Saya sudah sampai di sekolah."],
+      ["HSK2", 97, "穿", "chuān", "memakai (baju/sepatu)", "今天冷，多穿点儿衣服。", "Jīntiān lěng, duō chuān diǎnr yīfu.", "Hari ini dingin, pakailah baju lebih tebal."],
+      ["HSK2", 98, "洗", "xǐ", "mencuci", "吃饭前要洗手。", "Chīfàn qián yào xǐ shǒu.", "Sebelum makan harus mencuci tangan."],
+      ["HSK2", 99, "给", "gěi", "memberi, kepada", "我给你买了一本书。", "Wǒ gěi nǐ mǎi le yī běn shū.", "Saya membelikan sebuah buku untukmu."],
+      ["HSK2", 100, "找", "zhǎo", "mencari", "你在找什么？", "Nǐ zài zhǎo shénme?", "Apa yang sedang kamu cari?"],
+      ["HSK2", 101, "懂", "dǒng", "mengerti, paham", "我听懂老师的话了。", "Wǒ tīng dǒng lǎoshī de huà le.", "Saya mengerti perkataan guru."],
+      ["HSK2", 102, "笑", "xiào", "tertawa, tersenyum", "她笑得很开心。", "Tā xiào de hěn kāixīn.", "Dia tersenyum dengan sangat gembira."],
+      ["HSK2", 103, "告诉", "gàosu", "memberi tahu", "请告诉我你的电话号码。", "Qǐng gàosu wǒ nǐ de diànhuà hàomǎ.", "Tolong beri tahu saya nomor teleponmu."],
+      ["HSK2", 104, "准备", "zhǔnbèi", "bersiap, mempersiapkan", "我在准备明天的考试。", "Wǒ zài zhǔnbèi míngtiān de kǎoshì.", "Saya sedang mempersiapkan ujian besok."],
+      ["HSK2", 105, "开始", "kāishǐ", "mulai", "电影八点开始。", "Diànyǐng bā diǎn kāishǐ.", "Film mulai pukul delapan."],
+      ["HSK2", 106, "介绍", "jièshào", "memperkenalkan", "我来介绍一下我的朋友。", "Wǒ lái jièshào yīxià wǒ de péngyou.", "Saya akan memperkenalkan teman saya."],
+      ["HSK2", 107, "帮助", "bāngzhù", "membantu", "谢谢你帮助我学习汉语。", "Xièxie nǐ bāngzhù wǒ xuéxí Hànyǔ.", "Terima kasih telah membantu saya belajar Mandarin."],
+      ["HSK2", 108, "玩", "wán", "bermain", "周末我们去朋友家玩。", "Zhōumò wǒmen qù péngyou jiā wán.", "Akhir pekan kita pergi bermain ke rumah teman."],
+      ["HSK2", 109, "送", "sòng", "mengantar, menghadiahkan", "朋友送给我一件礼物。", "Péngyou sòng gěi wǒ yī jiàn lǐwù.", "Teman menghadiahkan sebuah kado kepada saya."],
+      ["HSK2", 110, "等", "děng", "menunggu", "我在门口等你。", "Wǒ zài ménkǒu děng nǐ.", "Saya menunggumu di depan pintu."],
+      ["HSK2", 111, "让", "ràng", "menyuruh, membiarkan", "妈妈让我多喝水。", "Māma ràng wǒ duō hē shuǐ.", "Ibu menyuruh saya banyak minum air."],
+      ["HSK2", 112, "起床", "qǐchuáng", "bangun tidur", "我每天六点半起床。", "Wǒ měitiān liù diǎn bàn qǐchuáng.", "Saya bangun tidur jam setengah tujuh setiap hari."],
+      ["HSK2", 113, "唱歌", "chànggē", "bernyanyi", "妹妹很喜欢唱歌。", "Mèimei hěn xǐhuan chànggē.", "Adik perempuan sangat suka bernyanyi."],
+      ["HSK2", 114, "跳舞", "tiàowǔ", "menari", "她跳舞跳得很好。", "Tā tiàowǔ tiào de hěn hǎo.", "Dia menari dengan sangat bagus."],
+      ["HSK2", 115, "旅游", "lǚyóu", "berwisata, jalan-jalan", "我喜欢去不同的国家旅游。", "Wǒ xǐhuan qù bùtóng de guójiā lǚyóu.", "Saya suka berwisata ke berbagai negara."],
+      ["HSK2", 116, "上班", "shàngbān", "masuk kerja", "爸爸早上八点去上班。", "Bàba zǎoshang bā diǎn qù shàngbān.", "Ayah pergi bekerja jam 8 pagi."],
+      ["HSK2", 117, "生病", "shēngbìng", "jatuh sakit", "他生病了，今天没来上课。", "Tā shēngbìng le, jīntiān méi lái shàngkè.", "Dia sakit, hari ini tidak masuk kelas."],
+      ["HSK2", 118, "休息", "xiūxi", "beristirahat", "你太累了，休息一下吧。", "Nǐ tài lèi le, xiūxi yīxià ba.", "Kamu terlalu lelah, istirahatlah sebentar."],
+      ["HSK2", 119, "运动", "yùndòng", "berolahraga", "你喜欢什么运动？", "Nǐ xǐhuan shénme yùndòng?", "Olahraga apa yang kamu suka?"],
+      ["HSK2", 120, "游泳", "yóuyǒng", "berenang", "夏天我常去游泳。", "Xiàtiān wǒ cháng qù yóuyǒng.", "Musim panas saya sering pergi berenang."],
+      ["HSK2", 121, "踢足球", "tī zúqiú", "bermain sepak bola", "男孩子们在操场踢足球。", "Nánháizimen zài cāochǎng tī zúqiú.", "Anak-anak laki-laki bermain sepak bola di lapangan."],
+      ["HSK2", 122, "打篮球", "dǎ lánqiú", "bermain bola basket", "我哥哥每天下午打篮球。", "Wǒ gēge měitiān xiàwǔ dǎ lánqiú.", "Kakak laki-laki saya bermain basket setiap sore."],
+      ["HSK2", 123, "完", "wán", "selesai, habis", "这本书我看完了。", "Zhè běn shū wǒ kàn wán le.", "Buku ini sudah selesai saya baca."],
+      ["HSK2", 124, "觉得", "juéde", "merasa, berpendapat", "我觉得汉语很有趣。", "Wǒ juéde Hànyǔ hěn yǒuqù.", "Saya merasa bahasa Mandarin sangat menarik."],
+      ["HSK2", 125, "知道", "zhīdao", "tahu, mengetahui", "你知道他住在哪儿吗？", "Nǐ zhīdao tā zhù zài nǎr ma?", "Apakah kamu tahu di mana dia tinggal?"],
+      ["HSK2", 126, "希望", "xīwàng", "berharap", "我希望明年去中国。", "Wǒ xīwàng míngnián qù Zhōngguó.", "Saya berharap tahun depan pergi ke Tiongkok."],
+      ["HSK2", 127, "可以", "kěyǐ", "boleh, bisa", "我可以坐这儿吗？", "Wǒ kěyǐ zuò zhèr ma?", "Bolehkah saya duduk di sini?"],
+      ["HSK2", 128, "要", "yào", "mau, ingin, harus", "我要一杯冰咖啡。", "Wǒ yào yī bēi bīng kāfēi.", "Saya mau segelas es kopi."],
+      ["HSK2", 129, "可能", "kěnéng", "mungkin", "明天可能会下雨。", "Míngtiān kěnéng huì xià yǔ.", "Besok mungkin akan turun hujan."],
+      ["HSK2", 130, "高", "gāo", "tinggi", "那座山很高。", "Nà zuò shān hěn gāo.", "Gunung itu sangat tinggi."],
+      ["HSK2", 131, "红", "hóng", "merah", "她穿了一件红裙子。", "Tā chuān le yī jiàn hóng qúnzi.", "Dia memakai rok berwarna merah."],
+      ["HSK2", 132, "白", "bái", "putih", "天上的云很白。", "Tiānshàng de yún hěn bái.", "Awan di langit sangat putih."],
+      ["HSK2", 133, "黑", "hēi", "hitam", "我有一双黑皮鞋。", "Wǒ yǒu yī shuāng hēi píxié.", "Saya punya sepasang sepatu kulit hitam."],
+      ["HSK2", 134, "忙", "máng", "sibuk", "最近工作很忙。", "Zuìjìn gōngzuò hěn máng.", "Akhir-akhir ini pekerjaan sangat sibuk."],
+      ["HSK2", 135, "快", "kuài", "cepat", "坐飞机去很快。", "Zuò fēijī qù hěn kuài.", "Pergi naik pesawat sangat cepat."],
+      ["HSK2", 136, "慢", "màn", "lambat, pelan", "他走得很慢。", "Tā zǒu de hěn màn.", "Dia berjalan sangat pelan."],
+      ["HSK2", 137, "远", "yuǎn", "jauh", "学校离我家不远。", "Xuéxiào lí wǒ jiā bù yuǎn.", "Sekolah tidak jauh dari rumah saya."],
+      ["HSK2", 138, "近", "jìn", "dekat", "地铁站就在附近。", "Dìtiězhàn jiù zài fùjìn.", "Stasiun MRT ada di dekat sini."],
+      ["HSK2", 139, "好吃", "hǎochī", "enak, lezat", "这个蛋糕真好吃！", "Zhège dàngāo zhēn hǎochī!", "Kue ini sungguh lezat!"],
+      ["HSK2", 140, "累", "lèi", "lelah, capek", "工作了一天，我很累。", "Gōngzuò le yī tiān, wǒ hěn lèi.", "Bekerja seharian, saya sangat lelah."],
+      ["HSK2", 141, "长", "cháng", "panjang", "她的头发很长。", "Tā de tóufa hěn cháng.", "Rambutnya sangat panjang."],
+      ["HSK2", 142, "新", "xīn", "baru", "我买了一辆新自行车。", "Wǒ mǎi le yī liàng xīn zìxíngchē.", "Saya membeli sebuah sepeda baru."],
+      ["HSK2", 143, "贵", "guì", "mahal", "这家商店的衣服太贵了。", "Zhè jiā shāngdiàn de yīfu tài guì le.", "Baju di toko ini terlalu mahal."],
+      ["HSK2", 144, "便宜", "piányi", "murah", "这个苹果很便宜。", "Zhège píngguǒ hěn piányi.", "Apel ini sangat murah."],
+      ["HSK2", 145, "晴", "qíng", "cerah", "今天是晴天，我们去爬山吧。", "Jīntiān shì qíngtiān, wǒmen qù páshān ba.", "Hari ini cerah, ayo kita mendaki gunung."],
+      ["HSK2", 146, "阴", "yīn", "mendung", "今天阴天，可能要下雨。", "Jīntiān yīntiān, kěnéng yào xià yǔ.", "Hari ini mendung, mungkin akan hujan."],
+      ["HSK2", 147, "错", "cuò", "salah", "对不起，我打错电话了。", "Duìbuqǐ, wǒ dǎ cuò diànhuà le.", "Maaf, saya salah sambung telepon."],
+      ["HSK2", 148, "快乐", "kuàilè", "bahagia, gembira", "祝你天天快乐！", "Zhù nǐ tiāntiān kuàilè!", "Semoga kamu bahagia setiap hari!"],
+      ["HSK2", 149, "对", "duì", "terhadap, kepada", "多吃蔬菜对身体好。", "Duō chī shūcài duì shēntǐ hǎo.", "Banyak makan sayur baik terhadap tubuh."],
+      ["HSK2", 150, "对", "duì", "benar, betul", "你说得很对！", "Nǐ shuō de hěn duì!", "Perkataanmu sangat benar!"],
+
+      // --- HSK 3 (300 Kata) ---
+      ["HSK3", 1, "阿姨", "āyí", "bibi, tante", "王阿姨对我很好。", "Wáng āyí duì wǒ hěn hǎo.", "Bibi Wang sangat baik kepada saya."],
+      ["HSK3", 2, "啊", "a", "ah (partikel seru)", "这里真漂亮啊！", "Zhèlǐ zhēn piàoliang a!", "Di sini sungguh indah ah!"],
+      ["HSK3", 3, "矮", "ǎi", "pendek (tinggi badan)", "弟弟比哥哥矮一点儿。", "Dìdi bǐ gēge ǎi yīdiǎnr.", "Adik laki-laki sedikit lebih pendek dari kakak."],
+      ["HSK3", 4, "爱好", "àihào", "hobi, kegemaran", "我的爱好是看书和听音乐。", "Wǒ de àihào shì kànshū hé tīng yīnyuè.", "Hobi saya adalah membaca buku dan mendengarkan musik."],
+      ["HSK3", 5, "安静", "ānjìng", "tenang, sunyi", "图书馆里非常安静。", "Túshūguǎn lǐ fēicháng ānjìng.", "Di dalam perpustakaan sangat tenang."],
+      ["HSK3", 6, "把", "bǎ", "partikel objek (membuat/menaruh)", "请把书放在桌子上。", "Qǐng bǎ shū fàng zài zhuōzi shàng.", "Tolong taruh bukunya di atas meja."],
+      ["HSK3", 7, "班", "bān", "kelas, rombongan", "我们班有二十个学生。", "Wǒmen bān yǒu èrshí gè xuéshēng.", "Kelas kami ada dua puluh siswa."],
+      ["HSK3", 8, "搬", "bān", "memindahkan, pindah", "我们下个月要搬家。", "Wǒmen xià gè yuè yào bānjiā.", "Bulan depan kami akan pindah rumah."],
+      ["HSK3", 9, "半", "bàn", "setengah", "现在是下午三点半。", "Xiànzài shì xiàwǔ sān diǎn bàn.", "Sekarang pukul setengah empat sore."],
+      ["HSK3", 10, "办法", "bànfǎ", "cara, metode", "我一定能想出好办法。", "Wǒ yīdìng néng xiǎng chū hǎo bànfǎ.", "Saya pasti bisa memikirkan cara yang bagus."],
+      ["HSK3", 11, "办公室", "bàngōngshì", "kantor, ruang kerja", "李老师在办公室里。", "Lǐ lǎoshī zài bàngōngshì lǐ.", "Guru Li ada di dalam ruang kantor."],
+      ["HSK3", 12, "帮忙", "bāngmáng", "membantu", "谢谢你过来帮忙。", "Xièxie nǐ guòlái bāngmáng.", "Terima kasih kamu datang membantu."],
+      ["HSK3", 13, "包", "bāo", "tas, bungkus", "我的手机在包里。", "Wǒ de shǒujī zài bāo lǐ.", "Ponsel saya ada di dalam tas."],
+      ["HSK3", 14, "饱", "bǎo", "kenyang", "我吃饱了，谢谢。", "Wǒ chī bǎo le, xièxie.", "Saya sudah makan kenyang, terima kasih."],
+      ["HSK3", 15, "北方", "běifāng", "utara", "中国北方冬天很冷。", "Zhōngguó běifāng dōngtiān hěn lěng.", "Musim dingin di Tiongkok bagian utara sangat dingin."],
+      ["HSK3", 16, "被", "bèi", "oleh (kalimat pasif)", "蛋糕被弟弟吃完了。", "Dàngāo bèi dìdi chī wán le.", "Kuenya habis dimakan oleh adik."],
+      ["HSK3", 17, "鼻子", "bízi", "hidung", "他的鼻子很高。", "Tā de bízi hěn gāo.", "Hidungnya sangat mancung."],
+      ["HSK3", 18, "比较", "bǐjiào", "agak, cukup / membandingkan", "今天的天气比较凉快。", "Jīntiān de tiānqì bǐjiào liángkuai.", "Cuaca hari ini cukup sejuk."],
+      ["HSK3", 19, "比赛", "bǐsài", "pertandingan, lomba", "明天有一场足球比赛。", "Míngtiān yǒu yī chǎng zúqiú bǐsài.", "Besok ada satu pertandingan sepak bola."],
+      ["HSK3", 20, "笔记本", "bǐjìběn", "buku catatan / laptop", "我在笔记本上记生词。", "Wǒ zài bǐjìběn shàng jì shēngcí.", "Saya mencatat kosakata baru di buku catatan."],
+      ["HSK3", 21, "必须", "bìxū", "harus, wajib", "我们必须努力学习。", "Wǒmen bìxū nǔlì xuéxí.", "Kita harus belajar dengan giat."],
+      ["HSK3", 22, "变化", "biànhuà", "perubahan", "这个城市的变化真大。", "Zhège chéngshì de biànhuà zhēn dà.", "Perubahan kota ini sungguh besar."],
+      ["HSK3", 23, "别人", "biéren", "orang lain", "我们要学会关心别人。", "Wǒmen yào xuéhuì guānxīn biéren.", "Kita harus belajar peduli pada orang lain."],
+      ["HSK3", 24, "冰箱", "bīngxiāng", "kulkas, lemari es", "牛奶在冰箱里。", "Niúnǎi zài bīngxiāng lǐ.", "Susu ada di dalam kulkas."],
+      ["HSK3", 25, "菜单", "càidān", "daftar menu", "请把菜单拿给我看看。", "Qǐng bǎ càidān ná gěi wǒ kànkan.", "Tolong bawakan menu untuk saya lihat."],
+      ["HSK3", 26, "参加", "cānjiā", "mengikuti, berpartisipasi", "我想参加汉语比赛。", "Wǒ xiǎng cānjiā Hànyǔ bǐsài.", "Saya ingin mengikuti lomba bahasa Mandarin."],
+      ["HSK3", 27, "草", "cǎo", "rumput", "春天来了，草绿了。", "Chūntiān lái le, cǎo lǜ le.", "Musim semi tiba, rumput menjadi hijau."],
+      ["HSK3", 28, "层", "céng", "lantai, tingkat, lapisan", "我的办公室在五层。", "Wǒ de bàngōngshì zài wǔ céng.", "Kantor saya berada di lantai lima."],
+      ["HSK3", 29, "差", "chà", "kurang, buruk", "现在差十分八点。", "Xiànzài chà shí fēn bā diǎn.", "Sekarang jam delapan kurang sepuluh menit."],
+      ["HSK3", 30, "超市", "chāoshì", "supermarket, pasar swalayan", "妈妈去超市买菜了。", "Māma qù chāoshì mǎi cài le.", "Ibu pergi ke supermarket membeli sayur."],
+      ["HSK3", 31, "衬衫", "chènshān", "kemeja", "爸爸穿着一件白衬衫。", "Bàba chuān zhe yī jiàn bái chènshān.", "Ayah memakai sehelai kemeja putih."],
+      ["HSK3", 32, "成绩", "chéngjì", "nilai, prestasi", "他的学习成绩很好。", "Tā de xuéxí chéngjì hěn hǎo.", "Nilai belajarnya sangat bagus."],
+      ["HSK3", 33, "城市", "chéngshì", "kota", "北京是一个大城市。", "Běijīng shì yī gè dà chéngshì.", "Beijing adalah sebuah kota besar."],
+      ["HSK3", 34, "迟到", "chídào", "terlambat", "对不起，我今天迟到了。", "Duìbuqǐ, wǒ jīntiān chídào le.", "Maaf, hari ini saya terlambat."],
+      ["HSK3", 35, "除了", "chúle", "selain, kecuali", "除了汉语，我还会说英语。", "Chúle Hànyǔ, wǒ hái huì shuō Yīngyǔ.", "Selain Mandarin, saya juga bisa berbahasa Inggris."],
+      ["HSK3", 36, "船", "chuán", "kapal, perahu", "我们坐船去那个岛。", "Wǒmen zuò chuán qù nàge dǎo.", "Kami naik kapal pergi ke pulau itu."],
+      ["HSK3", 37, "春", "chūn", "musim semi", "春天花都开了。", "Chūntiān huā dōu kāi le.", "Pada musim semi bunga-bunga bermekaran."],
+      ["HSK3", 38, "词典", "cídiǎn", "kamus", "这本汉印尼词典很有用。", "Zhè běn Hàn-Yìnní cídiǎn hěn yǒuyòng.", "Kamus Mandarin-Indonesia ini sangat berguna."],
+      ["HSK3", 39, "聪明", "cōngming", "pintar, cerdas", "这个小女孩非常聪明。", "Zhège xiǎo nǚhái fēicháng cōngming.", "Gadis kecil ini sangat pintar."],
+      ["HSK3", 40, "打扫", "dǎsǎo", "membersihkan, menyapu", "周末我在家打扫房间。", "Zhōumò wǒ zài jiā dǎsǎo fángjiān.", "Akhir pekan saya membersihkan kamar di rumah."],
+      ["HSK3", 41, "打算", "dǎsuàn", "berencana, rencana", "你暑假打算去哪儿？", "Nǐ shǔjià dǎsuàn qù nǎr?", "Liburan musim panas kamu berencana pergi ke mana?"],
+      ["HSK3", 42, "带", "dài", "membawa", "出门别忘了带手机。", "Chūmén bié wàng le dài shǒujī.", "Keluar rumah jangan lupa bawa ponsel."],
+      ["HSK3", 43, "担心", "dānxīn", "khawatir", "你身体好了，妈妈就不担心了。", "Nǐ shēntǐ hǎo le, māma jiù bù dānxīn le.", "Kamu sudah sehat, ibu pun tidak khawatir lagi."],
+      ["HSK3", 44, "蛋糕", "dàngāo", "kue", "我买了一个生日蛋糕。", "Wǒ mǎi le yī gè shēngrì dàngāo.", "Saya membeli sebuah kue ulang tahun."],
+      ["HSK3", 45, "当然", "dāngrán", "tentu saja", "你问我，我当然会帮你。", "Nǐ wèn wǒ, wǒ dāngrán huì bāng nǐ.", "Kamu bertanya padaku, tentu saja saya akan membantumu."],
+      ["HSK3", 46, "地", "de", "partikel keterangan cara (-dengan)", "他高兴地笑了。", "Tā gāoxìng de xiào le.", "Dia tersenyum dengan gembira."],
+      ["HSK3", 47, "灯", "dēng", "lampu", "房间太暗了，请开灯。", "Fángjiān tài àn le, qǐng kāi dēng.", "Kamar terlalu gelap, tolong nyalakan lampu."],
+      ["HSK3", 48, "地方", "dìfang", "tempat", "你去过什么好玩的地方？", "Nǐ qù guo shénme hǎowán de dìfang?", "Tempat seru mana saja yang pernah kamu kunjungi?"],
+      ["HSK3", 49, "地铁", "dìtiě", "kereta bawah tanah (MRT)", "坐地铁上班又快又方便。", "Zuò dìtiě shàngbān yòu kuài yòu fāngbiàn.", "Naik MRT pergi kerja cepat dan praktis."],
+      ["HSK3", 50, "地图", "dìtú", "peta", "请给我一张中国地图。", "Qǐng gěi wǒ yī zhāng Zhōngguó dìtú.", "Tolong beri saya selembar peta Tiongkok."],
+      ["HSK3", 51, "电梯", "diàntī", "lift, eskalator", "我们坐电梯上十楼吧。", "Wǒmen zuò diàntī shàng shí lóu ba.", "Ayo kita naik lift ke lantai sepuluh."],
+      ["HSK3", 52, "电子邮件", "diànzǐ yóujiàn", "email, surel", "我给你发了一封电子邮件。", "Wǒ gěi nǐ fā le yī fēng diànzǐ yóujiàn.", "Saya sudah mengirimimu sebuah email."],
+      ["HSK3", 53, "东", "dōng", "timur", "太阳从东边升起。", "Tàiyáng cóng dōngbiān shēngqǐ.", "Matahari terbit dari sebelah timur."],
+      ["HSK3", 54, "冬", "dōng", "musim dingin", "我不喜欢冬天，太冷了。", "Wǒ bù xǐhuan dōngtiān, tài lěng le.", "Saya tidak suka musim dingin, terlalu dingin."],
+      ["HSK3", 55, "动物", "dòngwù", "hewan, binatang", "动物园里有很多动物。", "Dòngwùyuán lǐ yǒu hěn duō dòngwù.", "Di kebun binatang ada banyak hewan."],
+      ["HSK3", 56, "短", "duǎn", "pendek (ukuran/waktu)", "这条裤子太短了。", "Zhè tiáo kùzi tài duǎn le.", "Celana ini terlalu pendek."],
+      ["HSK3", 57, "段", "duàn", "penggal, paragraf, jangka waktu", "这段时间我一直很忙。", "Zhè duàn shíjiān wǒ yīzhí hěn máng.", "Belakangan waktu ini saya selalu sibuk."],
+      ["HSK3", 58, "锻炼", "duànliàn", "berolahraga, melatih fisik", "爷爷每天早上都锻炼身体。", "Yéye měitiān zǎoshang dōu duànliàn shēntǐ.", "Kakek melatih fisik setiap pagi."],
+      ["HSK3", 59, "多么", "duōme", "betapa, alangkah", "今天的天空多么蓝啊！", "Jīntiān de tiānkōng duōme lán a!", "Betapa birunya langit hari ini!"],
+      ["HSK3", 60, "饿", "è", "lapar", "我饿了，我们去吃饭吧。", "Wǒ è le, wǒmen qù chīfàn ba.", "Saya lapar, ayo kita pergi makan."],
+      ["HSK3", 61, "不但……而且……", "búdàn...érqiě...", "tidak hanya... tetapi juga...", "她不但聪明，而且很努力。", "Tā búdàn cōngming, érqiě hěn nǔlì.", "Dia tidak hanya pintar, tetapi juga rajin."],
+      ["HSK3", 62, "耳朵", "ěrduo", "telinga", "小兔子的耳朵很长。", "Xiǎo tùzi de ěrduo hěn cháng.", "Telinga kelinci kecil sangat panjang."],
+      ["HSK3", 63, "发", "fā", "mengirim, memancarkan", "我给你发微信了。", "Wǒ gěi nǐ fā Wēixìn le.", "Saya sudah mengirimimu pesan WeChat."],
+      ["HSK3", 64, "发烧", "fāshāo", "demam", "他感冒发烧了，要去医院。", "Tā gǎnmào fāshāo le, yào qù yīyuàn.", "Dia flu dan demam, harus pergi ke rumah sakit."],
+      ["HSK3", 65, "发现", "fāxiàn", "menemukan, menyadari", "我发现学汉语越来越有意思。", "Wǒ fāxiàn xué Hànyǔ yuèláiyuè yǒuyìsi.", "Saya menyadari belajar Mandarin makin lama makin seru."],
+      ["HSK3", 66, "方便", "fāngbiàn", "praktis, nyaman, leluasa", "我家附近有地铁，很方便。", "Wǒ jiā fùjìn yǒu dìtiě, hěn fāngbiàn.", "Dekat rumah saya ada MRT, sangat praktis."],
+      ["HSK3", 67, "放", "fàng", "menaruh, meletakkan", "请把书包放在椅子上。", "Qǐng bǎ shūbāo fàng zài yǐzi shàng.", "Tolong taruh tas sekolah di atas kursi."],
+      ["HSK3", 68, "放心", "fàngxīn", "tenang saja, jangan khawatir", "你放心，这件事我会办好。", "Nǐ fàngxīn, zhè jiàn shì wǒ huì bàn hǎo.", "Tenang saja, urusan ini akan saya bereskan."],
+      ["HSK3", 69, "分", "fēn", "menit / poin, nilai", "他数学考了一百分。", "Tā shùxué kǎo le yībǎi fēn.", "Nilai ujian matematikanya seratus."],
+      ["HSK3", 70, "附近", "fùjìn", "sekitar, dekat sini", "学校附近有很多饭馆。", "Xuéxiào fùjìn yǒu hěn duō fànguǎn.", "Di sekitar sekolah ada banyak rumah makan."],
+      ["HSK3", 71, "复习", "fùxí", "mengulang pelajaran (review)", "每天晚上我都会复习生词。", "Měitiān wǎnshang wǒ dōu huì fùxí shēngcí.", "Setiap malam saya selalu mengulang kosakata baru."],
+      ["HSK3", 72, "干净", "gānjìng", "bersih", "这件衣服洗得很干净。", "Zhè jiàn yīfu xǐ de hěn gānjìng.", "Baju ini dicuci dengan sangat bersih."],
+      ["HSK3", 73, "感兴趣", "gǎn xìngqù", "tertarik pada", "我对中国文化很感兴趣。", "Wǒ duì Zhōngguó wénhuà hěn gǎn xìngqù.", "Saya sangat tertarik pada budaya Tiongkok."],
+      ["HSK3", 74, "感冒", "gǎnmào", "masuk angin, pilek, flu", "天气冷了，小心别感冒。", "Tiānqì lěng le, xiǎoxīn bié gǎnmào.", "Cuaca dingin, hati-hati jangan sampai flu."],
+      ["HSK3", 75, "刚才", "gāngcái", "barusan, tadi", "刚才谁给你打电话？", "Gāngcái shéi gěi nǐ dǎ diànhuà?", "Siapa yang meneleponmu barusan?"],
+      ["HSK3", 76, "个子", "gèzi", "postur tinggi badan", "他个子很高，适合打篮球。", "Tā gèzi hěn gāo, shìhé dǎ lánqiú.", "Posturnya sangat tinggi, cocok bermain basket."],
+      ["HSK3", 77, "跟", "gēn", "dengan, bersama, mengikuti", "我跟朋友一起去看电影。", "Wǒ gēn péngyou yīqǐ qù kàn diànyǐng.", "Saya pergi menonton film bersama teman."],
+      ["HSK3", 78, "根据", "gēnjù", "berdasarkan, menurut", "请根据课文回答问题。", "Qǐng gēnjù kèwén huídá wèntí.", "Silakan jawab pertanyaan berdasarkan teks bacaan."],
+      ["HSK3", 79, "更", "gèng", "lebih", "我希望明天天气更好。", "Wǒ xīwàng míngtiān tiānqì gèng hǎo.", "Saya berharap cuaca besok lebih baik."],
+      ["HSK3", 80, "公斤", "gōngjīn", "kilogram (kg)", "我买了两公斤香蕉。", "Wǒ mǎi le liǎng gōngjīn xiāngjiāo.", "Saya membeli dua kilogram pisang."],
+      ["HSK3", 81, "公园", "gōngyuán", "taman", "周末我们去公园散步吧。", "Zhōumò wǒmen qù gōngyuán sànbù ba.", "Akhir pekan ayo kita jalan-jalan di taman."],
+      ["HSK3", 82, "故事", "gùshi", "cerita, kisah", "爷爷常给我讲历史故事。", "Yéye cháng gěi wǒ jiǎng lìshǐ gùshi.", "Kakek sering menceritakan kisah sejarah kepada saya."],
+      ["HSK3", 83, "刮风", "guā fēng", "berangin", "外面刮风了，快关窗户。", "Wàimiàn guā fēng le, kuài guān chuānghu.", "Di luar berangin, cepat tutup jendela."],
+      ["HSK3", 84, "关", "guān", "menutup, mematikan", "睡觉前请关灯。", "Shuìjiào qián qǐng guān dēng.", "Sebelum tidur tolong matikan lampu."],
+      ["HSK3", 85, "关系", "guānxì", "hubungan", "我和同事们的关系很好。", "Wǒ hé tóngshìmen de guānxì hěn hǎo.", "Hubungan saya dengan rekan-rekan kerja sangat baik."],
+      ["HSK3", 86, "关心", "guānxīn", "peduli, memperhatikan", "父母非常关心我的学习。", "Fùmǔ fēicháng guānxīn wǒ de xuéxí.", "Orang tua sangat peduli pada pelajaran saya."],
+      ["HSK3", 87, "关于", "guānyú", "tentang, mengenai", "这是一本关于中国历史的书。", "Zhè shì yī běn guānyú Zhōngguó lìshǐ de shū.", "Ini adalah buku tentang sejarah Tiongkok."],
+      ["HSK3", 88, "国家", "guójiā", "negara", "我去过很多国家。", "Wǒ qù guo hěn duō guójiā.", "Saya pernah pergi ke banyak negara."],
+      ["HSK3", 89, "过去", "guòqù", "masa lalu / lewat ke sana", "过去的事情就别想了。", "Guòqù de shìqing jiù bié xiǎng le.", "Hal yang sudah berlalu jangan dipikirkan lagi."],
+      ["HSK3", 90, "过(动词)", "guò", "melewati, merayakan", "下周我要过生日了。", "Xià zhōu wǒ yào guò shēngrì le.", "Minggu depan saya akan merayakan ulang tahun."],
+      ["HSK3", 91, "还是", "háishi", "atau (dalam tanya) / tetap saja", "你喝茶还是喝咖啡？", "Nǐ hē chá háishi hē kāfēi?", "Kamu mau minum teh atau minum kopi?"],
+      ["HSK3", 92, "害怕", "hàipà", "takut", "小猫很害怕大狗。", "Xiǎo māo hěn hàipà dà gǒu.", "Kucing kecil sangat takut pada anjing besar."],
+      ["HSK3", 93, "黑板", "hēibǎn", "papan tulis", "老师在黑板上写汉字。", "Lǎoshī zài hēibǎn shàng xiě Hànzì.", "Guru menulis karakter Mandarin di papan tulis."],
+      ["HSK3", 94, "后来", "hòulái", "kemudian, setelah itu", "起初很难，后来就习惯了。", "Qǐchū hěn nán, hòulái jiù xíguàn le.", "Awalnya sulit, kemudian lama-lama terbiasa."],
+      ["HSK3", 95, "护照", "hùzhào", "paspor", "出国旅游一定要带护照。", "Chūguó lǚyóu yīdìng yào dài hùzhào.", "Berwisata ke luar negeri wajib membawa paspor."],
+      ["HSK3", 96, "花(动词)", "huā", "menghabiskan (waktu/uang)", "买这辆车花了很多钱。", "Mǎi zhè liàng chē huā le hěn duō qián.", "Membeli mobil ini menghabiskan banyak uang."],
+      ["HSK3", 97, "花(名词)", "huā", "bunga", "花园里的花真香！", "Huāyuán lǐ de huā zhēn xiāng!", "Bunga-bunga di taman sungguh harum!"],
+      ["HSK3", 98, "画", "huà", "melukis / lukisan", "妹妹喜欢画画儿。", "Mèimei xǐhuan huà huàr.", "Adik perempuan suka melukis."],
+      ["HSK3", 99, "坏", "huài", "rusak, buruk, jahat", "我的电脑坏了，不能用了。", "Wǒ de diànnǎo huài le, bù néng yòng le.", "Komputer saya rusak, tidak bisa dipakai lagi."],
+      ["HSK3", 100, "欢迎", "huānyíng", "menyambut, selamat datang", "欢迎大家来印尼旅游！", "Huānyíng dàjiā lái Yìnní lǚyóu!", "Selamat datang semuanya berwisata ke Indonesia!"],
+      ["HSK3", 101, "还(动词)", "huán", "mengembalikan", "我看完书就还给你。", "Wǒ kàn wán shū jiù huán gěi nǐ.", "Setelah selesai baca buku akan saya kembalikan padamu."],
+      ["HSK3", 102, "环境", "huánjìng", "lingkungan", "这里的学习环境很好。", "Zhèlǐ de xuéxí huánjìng hěn hǎo.", "Lingkungan belajar di sini sangat bagus."],
+      ["HSK3", 103, "换", "huàn", "menukar, mengganti", "我想去银行换钱。", "Wǒ xiǎng qù yínháng huàn qián.", "Saya ingin pergi ke bank menukar uang."],
+      ["HSK3", 104, "黄河", "Huáng Hé", "Sungai Kuning", "黄河是中国的母亲河。", "Huáng Hé shì Zhōngguó de mǔqīn hé.", "Sungai Kuning adalah sungai ibu bangsa Tiongkok."],
+      ["HSK3", 105, "回答", "huídá", "menjawab", "他流利地回答了老师的问题。", "Tā liúlì de huídá le lǎoshī de wèntí.", "Dia menjawab pertanyaan guru dengan lancar."],
+      ["HSK3", 106, "会议", "huìyì", "rapat, pertemuan", "经理正在开一个重要会议。", "Jīnglǐ zhèngzài kāi yī gè zhòngyào huìyì.", "Manajer sedang mengadakan rapat penting."],
+      ["HSK3", 107, "或者", "huòzhě", "atau (dalam pernyataan)", "周末我常看书或者看电影。", "Zhōumò wǒ cháng kànshū huòzhě kàn diànyǐng.", "Akhir pekan saya sering baca buku atau nonton film."],
+      ["HSK3", 108, "几乎", "jīhū", "hampir", "我几乎每天都练习说汉语。", "Wǒ jīhū měitiān dōu liànxí shuō Hànyǔ.", "Saya hampir setiap hari berlatih berbicara Mandarin."],
+      ["HSK3", 109, "机会", "jīhuì", "kesempatan, peluang", "这是一个很好的学习机会。", "Zhè shì yī gè hěn hǎo de xuéxí jīhuì.", "Ini adalah kesempatan belajar yang sangat bagus."],
+      ["HSK3", 110, "极", "jí", "sangat, luar biasa", "今天的表演精彩极了！", "Jīntiān de biǎoyǎn jīngcǎi jí le!", "Pertunjukan hari ini luar biasa bagus!"],
+      ["HSK3", 111, "记得", "jìde", "ingat, mengingat", "我还记得他的名字。", "Wǒ hái jìde tā de míngzi.", "Saya masih ingat namanya."],
+      ["HSK3", 112, "季节", "jìjié", "musim", "一年有春夏秋冬四个季节。", "Yī nián yǒu chūn xià qiū dōng sì gè jìjié.", "Satu tahun ada empat musim: semi, panas, gugur, dingin."],
+      ["HSK3", 113, "检查", "jiǎnchá", "memeriksa, mengecek", "写完作业要认真检查。", "Xiě wán zuòyè yào rènzhēn jiǎnchá.", "Setelah selesai menulis PR harus diperiksa dengan teliti."],
+      ["HSK3", 114, "简单", "jiǎndān", "sederhana, mudah", "这道菜的做法很简单。", "Zhè dào cài de zuòfǎ hěn jiǎndān.", "Cara membuat masakan ini sangat sederhana."],
+      ["HSK3", 115, "健康", "jiànkāng", "sehat, kesehatan", "祝爷爷奶奶身体健康！", "Zhù yéye nǎinai shēntǐ jiànkāng!", "Semoga kakek dan nenek selalu sehat!"],
+      ["HSK3", 116, "见面", "jiànmiàn", "bertemu", "我们好久没见面了。", "Wǒmen hǎojiǔ méi jiànmiàn le.", "Kita sudah lama tidak bertemu."],
+      ["HSK3", 117, "讲", "jiǎng", "berbicara, menjelaskan, bercerita", "老师正在讲新的语法。", "Lǎoshī zhèngzài jiǎng xīn de yǔfǎ.", "Guru sedang menjelaskan tata bahasa baru."],
+      ["HSK3", 118, "教", "jiāo", "mengajar", "她教我们唱中文歌。", "Tā jiāo wǒmen chàng Zhōngwén gē.", "Dia mengajar kami menyanyikan lagu Mandarin."],
+      ["HSK3", 119, "角", "jiǎo", "sudut / satuan uang 10 sen", "桌子角上有一本书。", "Zhuōzi jiǎo shàng yǒu yī běn shū.", "Di sudut meja ada sebuah buku."],
+      ["HSK3", 120, "脚", "jiǎo", "kaki", "走了这么久，我的脚很疼。", "Zǒu le zhème jiǔ, wǒ de jiǎo hěn téng.", "Berjalan selama ini, kaki saya sangat sakit."],
+      ["HSK3", 121, "接", "jiē", "menjemput, menerima (telepon)", "爸爸开车去机场接客人。", "Bàba kāichē qù jīchǎng jiē kèrén.", "Ayah menyetir ke bandara menjemput tamu."],
+      ["HSK3", 122, "街道", "jiēdào", "jalan raya", "这条街道非常干净。", "Zhè tiáo jiēdào fēicháng gānjìng.", "Jalan raya ini sangat bersih."],
+      ["HSK3", 123, "结婚", "jiéhūn", "menikah", "我姐姐去年结婚了。", "Wǒ jiějie qùnián jiéhūn le.", "Kakak perempuan saya menikah tahun lalu."],
+      ["HSK3", 124, "结束", "jiéshù", "selesai, berakhir", "考试十一点结束。", "Kǎoshì shíyī diǎn jiéshù.", "Ujian berakhir pukul sebelas."],
+      ["HSK3", 125, "节目", "jiémù", "acara, program pertunjukan", "这个电视节目很有意思。", "Zhège diànshì jiémù hěn yǒuyìsi.", "Acara TV ini sangat menarik."],
+      ["HSK3", 126, "节日", "jiérì", "hari raya, festival", "春节是中国最重要的节日。", "Chūnjié shì Zhōngguó zuì zhòngyào de jiérì.", "Imlek adalah hari raya terpenting di Tiongkok."],
+      ["HSK3", 127, "解决", "jiějué", "menyelesaikan (masalah)", "这个问题已经解决了。", "Zhège wèntí yǐjīng jiějué le.", "Masalah ini sudah terselesaikan."],
+      ["HSK3", 128, "借", "jiè", "meminjam", "我去图书馆借了两本书。", "Wǒ qù túshūguǎn jiè le liǎng běn shū.", "Saya pergi ke perpustakaan meminjam dua buku."],
+      ["HSK3", 129, "经常", "jīngcháng", "sering", "我经常和朋友一起打球。", "Wǒ jīngcháng hé péngyou yīqǐ dǎqiú.", "Saya sering bermain bola bersama teman."],
+      ["HSK3", 130, "经过", "jīngguò", "melewati, melalui", "我每天上班都经过这家商店。", "Wǒ měitiān shàngbān dōu jīngguò zhè jiā shāngdiàn.", "Setiap hari berangkat kerja saya melewati toko ini."],
+      ["HSK3", 131, "经理", "jīnglǐ", "manajer", "张经理正在开会。", "Zhāng jīnglǐ zhèngzài kāihuì.", "Manajer Zhang sedang rapat."],
+      ["HSK3", 132, "久", "jiǔ", "lama (durasi waktu)", "你学汉语学了多久？", "Nǐ xué Hànyǔ xué le duō jiǔ?", "Sudah berapa lama kamu belajar bahasa Mandarin?"],
+      ["HSK3", 133, "旧", "jiù", "lama, usang, bekas", "这件旧衣服不能穿了。", "Zhè jiàn jiù yīfu bù néng chuān le.", "Baju usang ini tidak bisa dipakai lagi."],
+      ["HSK3", 134, "句子", "jùzi", "kalimat", "请用这个词造一个句子。", "Qǐng yòng zhège cí zào yī gè jùzi.", "Silakan buat satu kalimat menggunakan kata ini."],
+      ["HSK3", 135, "决定", "juédìng", "memutuskan, keputusan", "我决定去中国留学。", "Wǒ juédìng qù Zhōngguó liúxué.", "Saya memutuskan untuk kuliah di Tiongkok."],
+      ["HSK3", 136, "渴", "kě", "haus", "我渴了，想喝点儿水。", "Wǒ kě le, xiǎng hē diǎnr shuǐ.", "Saya haus, ingin minum sedikit air."],
+      ["HSK3", 137, "可爱", "kě'ài", "lucu, menggemaskan", "这个小宝宝真可爱！", "Zhège xiǎo bǎobao zhēn kě'ài!", "Bayi kecil ini sungguh menggemaskan!"],
+      ["HSK3", 138, "刻", "kè", "seperempat jam (15 menit)", "现在是八点一刻。", "Xiànzài shì bā diǎn yī kè.", "Sekarang pukul delapan lewat lima belas menit."],
+      ["HSK3", 139, "客人", "kèrén", "tamu", "家里来客人了，快请进。", "Jiā lǐ lái kèrén le, kuài qǐng jìn.", "Ada tamu datang ke rumah, cepat silakan masuk."],
+      ["HSK3", 140, "空调", "kōngtiáo", "AC (pendingin ruangan)", "天气太热了，把空调打开吧。", "Tiānqì tài rè le, bǎ kōngtiáo dǎkāi ba.", "Cuaca terlalu panas, nyalakanlah AC-nya."],
+      ["HSK3", 141, "口", "kǒu", "mulut / satuan anggota keluarga", "我家有四口人。", "Wǒ jiā yǒu sì kǒu rén.", "Keluarga saya terdiri dari empat orang."],
+      ["HSK3", 142, "哭", "kū", "menangis", "小孩子饿了就会哭。", "Xiǎo háizi è le jiù huì kū.", "Anak kecil kalau lapar akan menangis."],
+      ["HSK3", 143, "裤子", "kùzi", "celana", "我想买一条新裤子。", "Wǒ xiǎng mǎi yī tiáo xīn kùzi.", "Saya ingin membeli sehelai celana baru."],
+      ["HSK3", 144, "筷子", "kuàizi", "sumpit", "中国人吃饭习惯用筷子。", "Zhōngguórén chīfàn xíguàn yòng kuàizi.", "Orang Tiongkok terbiasa makan menggunakan sumpit."],
+      ["HSK3", 145, "蓝", "lán", "biru", "我喜欢穿蓝色的衬衫。", "Wǒ xǐhuan chuān lánsè de chènshān.", "Saya suka memakai kemeja berwarna biru."],
+      ["HSK3", 146, "老", "lǎo", "tua / lama", "他是我认识十年的老朋友。", "Tā shì wǒ rènshi shí nián de lǎo péngyou.", "Dia adalah teman lama yang saya kenal 10 tahun."],
+      ["HSK3", 147, "离开", "líkāi", "meninggalkan, berangkat dari", "火车十点离开北京。", "Huǒchē shí diǎn líkāi Běijīng.", "Kereta berangkat meninggalkan Beijing pukul 10."],
+      ["HSK3", 148, "礼物", "lǐwù", "hadiah, kado", "这是我送给妈妈的生日礼物。", "Zhè shì wǒ sòng gěi māma de shēngrì lǐwù.", "Ini adalah kado ulang tahun yang saya berikan untuk ibu."],
+      ["HSK3", 149, "历史", "lìshǐ", "sejarah", "中国有五千年的历史。", "Zhōngguó yǒu wǔ qiān nián de lìshǐ.", "Tiongkok memiliki sejarah lima ribu tahun."],
+      ["HSK3", 150, "脸", "liǎn", "wajah, muka", "她高兴得脸都红了。", "Tā gāoxìng de liǎn dōu hóng le.", "Dia sangat senang sampai wajahnya memerah."],
+      ["HSK3", 151, "聊天", "liáotiān", "mengobrol", "我们一边喝茶一边聊天。", "Wǒmen yībiān hē chá yībiān liáotiān.", "Kami mengobrol sambil minum teh."],
+      ["HSK3", 152, "练习", "liànxí", "berlatih, latihan", "学习语言要多听多练习。", "Xuéxí yǔyán yào duō tīng duō liànxí.", "Belajar bahasa harus banyak mendengar dan berlatih."],
+      ["HSK3", 153, "辆", "liàng", "kata satuan untuk kendaraan", "路边停着一辆出租车。", "Lùbiān tíng zhe yī liàng chūzūchē.", "Di pinggir jalan terparkir sebuah taksi."],
+      ["HSK3", 154, "了解", "liǎojiě", "memahami, mengenal dengan baik", "我很了解他的性格。", "Wǒ hěn liǎojiě tā de xìnggé.", "Saya sangat memahami sifatnya."],
+      ["HSK3", 155, "邻居", "línjū", "tetangga", "我们的新邻居非常热情。", "Wǒmen de xīn línjū fēicháng rèqíng.", "Tetangga baru kami sangat ramah."],
+      ["HSK3", 156, "留学", "liúxué", "belajar di luar negeri", "明年我想去上海留学。", "Míngnián wǒ xiǎng qù Shànghǎi liúxué.", "Tahun depan saya ingin kuliah di Shanghai."],
+      ["HSK3", 157, "楼", "lóu", "gedung, lantai", "我们住在这栋楼的三层。", "Wǒmen zhù zài zhè dòng lóu de sān céng.", "Kami tinggal di lantai tiga gedung ini."],
+      ["HSK3", 158, "绿", "lǜ", "hijau", "我最喜欢的颜色是绿色。", "Wǒ zuì xǐhuan de yánsè shì lǜsè.", "Warna yang paling saya suka adalah hijau."],
+      ["HSK3", 159, "马", "mǎ", "kuda", "草原上有很多马在跑。", "Cǎoyuán shàng yǒu hěn duō mǎ zài pǎo.", "Di padang rumput ada banyak kuda berlari."],
+      ["HSK3", 160, "马上", "mǎshàng", "segera, langsung", "你等一下，我马上就来。", "Nǐ děng yīxià, wǒ mǎshàng jiù lái.", "Tunggu sebentar, saya segera datang."],
+      ["HSK3", 161, "满意", "mǎnyì", "puas", "经理对我的工作很满意。", "Jīnglǐ duì wǒ de gōngzuò hěn mǎnyì.", "Manajer sangat puas dengan pekerjaan saya."],
+      ["HSK3", 162, "帽子", "màozi", "topi", "太阳很大，戴上帽子吧。", "Tàiyáng hěn dà, dài shàng màozi ba.", "Matahari terik, pakailah topi."],
+      ["HSK3", 163, "米", "mǐ", "meter / beras", "他身高一米八。", "Tā shēngāo yī mǐ bā.", "Tinggi badannya satu meter delapan puluh."],
+      ["HSK3", 164, "面包", "miànbāo", "roti", "早饭我喜欢吃面包喝牛奶。", "Zǎofàn wǒ xǐhuan chī miànbāo hē niúnǎi.", "Sarapan saya suka makan roti dan minum susu."],
+      ["HSK3", 165, "明白", "míngbai", "mengerti, jelas", "我明白你的意思了。", "Wǒ míngbai nǐ de yìsi le.", "Saya mengerti maksudmu."],
+      ["HSK3", 166, "拿", "ná", "mengambil, memegang", "请帮我拿一下那本书。", "Qǐng bāng wǒ ná yīxià nà běn shū.", "Tolong bantu saya mengambil buku itu."],
+      ["HSK3", 167, "奶奶", "nǎinai", "nenek", "奶奶今年七十五岁了。", "Nǎinai jīnnián qīshíwǔ suì le.", "Tahun ini nenek berusia 75 tahun."],
+      ["HSK3", 168, "南", "nán", "selatan", "秋天鸟儿飞往南方。", "Qiūtiān niǎor fēi wǎng nánfāng.", "Musim gugur burung-burung terbang ke selatan."],
+      ["HSK3", 169, "难", "nán", "sulit, susah", "我觉得写汉字有点儿难。", "Wǒ juéde xiě Hànzì yǒudiǎnr nán.", "Saya merasa menulis karakter Mandarin agak sulit."],
+      ["HSK3", 170, "难过", "nánguò", "sedih", "听到这个消息，她很难过。", "Tīngdào zhège xiāoxi, tā hěn nánguò.", "Mendengar kabar ini, dia sangat sedih."],
+      ["HSK3", 171, "年级", "niánjí", "tingkat kelas", "弟弟现在上三年级。", "Dìdi xiànzài shàng sān niánjí.", "Adik laki-laki sekarang kelas tiga."],
+      ["HSK3", 172, "年轻", "niánqīng", "muda", "我们的汉语老师很年轻。", "Wǒmen de Hànyǔ lǎoshī hěn niánqīng.", "Guru bahasa Mandarin kami sangat muda."],
+      ["HSK3", 173, "鸟", "niǎo", "burung", "树上有几只小鸟在唱歌。", "Shù shàng yǒu jǐ zhī xiǎo niǎo zài chànggē.", "Di atas pohon ada beberapa burung kecil bernyanyi."],
+      ["HSK3", 174, "努力", "nǔlì", "berusaha keras, rajin", "只要努力，就一定能成功。", "Zhǐyào nǔlì, jiù yīdìng néng chénggōng.", "Asalkan berusaha keras, pasti bisa berhasil."],
+      ["HSK3", 175, "爬山", "páshān", "mendaki gunung", "周末我们去爬山吧。", "Zhōumò wǒmen qù páshān ba.", "Akhir pekan ayo kita pergi mendaki gunung."],
+      ["HSK3", 176, "盘子", "pánzi", "piring", "盘子里放着新鲜的水果。", "Pánzi lǐ fàng zhe xīnxiān de shuǐguǒ.", "Di dalam piring diletakkan buah-buahan segar."],
+      ["HSK3", 177, "胖", "pàng", "gemuk", "他最近吃多了，有点儿胖。", "Tā zuìjìn chī duō le, yǒudiǎnr pàng.", "Akhir-akhir ini dia banyak makan, jadi agak gemuk."],
+      ["HSK3", 178, "啤酒", "píjiǔ", "bir", "爸爸喜欢喝冰啤酒。", "Bàba xǐhuan hē bīng píjiǔ.", "Ayah suka minum bir dingin."],
+      ["HSK3", 179, "皮鞋", "píxié", "sepatu kulit", "上班要穿黑皮鞋。", "Shàngbān yào chuān hēi píxié.", "Masuk kerja harus memakai sepatu kulit hitam."],
+      ["HSK3", 180, "瓶子", "píngzi", "botol", "这个瓶子里装满了水。", "Zhège píngzi lǐ zhuāng mǎn le shuǐ.", "Botol ini terisi penuh dengan air."],
+      ["HSK3", 181, "其实", "qíshí", "sebenarnya", "其实学汉语并没有那么难。", "Qíshí xué Hànyǔ bìng méiyǒu nàme nán.", "Sebenarnya belajar Mandarin tidak sesulit itu."],
+      ["HSK3", 182, "其他", "qítā", "yang lain, lainnya", "除了他以外，其他人都来了。", "Chúle tā yǐwài, qítā rén dōu lái le.", "Selain dia, orang-orang lainnya sudah datang."],
+      ["HSK3", 183, "骑", "qí", "mengendarai (sepeda/motor/kuda)", "我每天骑自行车去学校。", "Wǒ měitiān qí zìxíngchē qù xuéxiào.", "Saya naik sepeda ke sekolah setiap hari."],
+      ["HSK3", 184, "奇怪", "qíguài", "aneh", "这件事真奇怪！", "Zhè jiàn shì zhēn qíguài!", "Hal ini sungguh aneh!"],
+      ["HSK3", 185, "起来", "qǐlái", "bangun, berdiri / mulai", "大家请站起来。", "Dàjiā qǐng zhàn qǐlái.", "Semuanya silakan berdiri."],
+      ["HSK3", 186, "起飞", "qǐfēi", "lepas landas (pesawat)", "飞机十点半准时起飞。", "Fēijī shí diǎn bàn zhǔnshí qǐfēi.", "Pesawat lepas landas tepat pukul setengah sebelas."],
+      ["HSK3", 187, "清楚", "qīngchu", "jelas", "老师讲得很清楚。", "Lǎoshī jiǎng de hěn qīngchu.", "Guru menjelaskan dengan sangat jelas."],
+      ["HSK3", 188, "请假", "qǐngjià", "meminta izin (tidak masuk)", "他生病了，向老师请假了。", "Tā shēngbìng le, xiàng lǎoshī qǐngjià le.", "Dia sakit, sudah meminta izin kepada guru."],
+      ["HSK3", 189, "秋", "qiū", "musim gugur", "秋天的天气不冷也不热。", "Qiūtiān de tiānqì bù lěng yě bù rè.", "Cuaca musim gugur tidak dingin dan tidak panas."],
+      ["HSK3", 190, "裙子", "qúnzi", "rok, gaun", "她穿这条裙子真好看。", "Tā chuān zhè tiáo qúnzi zhēn hǎokàn.", "Dia memakai rok ini terlihat sangat bagus."],
+      ["HSK3", 191, "然后", "ránhòu", "lalu, kemudian", "我先写作业，然后看电视。", "Wǒ xiān xiě zuòyè, ránhòu kàn diànshì.", "Saya mengerjakan PR dulu, lalu menonton TV."],
+      ["HSK3", 192, "热情", "rèqíng", "ramah, antusias", "中国人对客人非常热情。", "Zhōngguórén duì kèrén fēicháng rèqíng.", "Orang Tiongkok sangat ramah terhadap tamu."],
+      ["HSK3", 193, "认为", "rènwéi", "berpendapat, menganggap", "我认为这个方法很有效。", "Wǒ rènwéi zhège fāngfǎ hěn yǒuxiào.", "Saya berpendapat cara ini sangat efektif."],
+      ["HSK3", 194, "认真", "rènzhēn", "sungguh-sungguh, serius", "他学习非常认真。", "Tā xuéxí fēicháng rènzhēn.", "Dia belajar dengan sangat sungguh-sungguh."],
+      ["HSK3", 195, "容易", "róngyì", "mudah", "这个汉字很容易记住。", "Zhège Hànzì hěn róngyì jìzhù.", "Huruf Mandarin ini sangat mudah diingat."],
+      ["HSK3", 196, "如果", "rúguǒ", "jika, kalau", "如果明天下雨，我们就不去了。", "Rúguǒ míngtiān xià yǔ, wǒmen jiù bù qù le.", "Jika besok hujan, kita tidak jadi pergi."],
+      ["HSK3", 197, "伞", "sǎn", "payung", "下雨了，别忘了带伞。", "Xià yǔ le, bié wàng le dài sǎn.", "Turun hujan, jangan lupa membawa payung."],
+      ["HSK3", 198, "上网", "shàngwǎng", "berselancar di internet", "我喜欢上网查资料。", "Wǒ xǐhuan shàngwǎng chá zīliào.", "Saya suka mencari informasi di internet."],
+      ["HSK3", 199, "生气", "shēngqì", "marah", "别生气了，我向你道歉。", "Bié shēngqì le, wǒ xiàng nǐ dàoqiàn.", "Jangan marah lagi, saya minta maaf padamu."],
+      ["HSK3", 200, "声音", "shēngyīn", "suara, bunyi", "她的声音很好听。", "Tā de shēngyīn hěn hǎotīng.", "Suaranya sangat merdu."],
+      ["HSK3", 201, "试", "shì", "mencoba", "这件衣服你可以试一下。", "Zhè jiàn yīfu nǐ kěyǐ shì yīxià.", "Baju ini boleh kamu coba dulu."],
+      ["HSK3", 202, "世界", "shìjiè", "dunia", "世界这么大，我想去看看。", "Shìjiè zhème dà, wǒ xiǎng qù kànkan.", "Dunia seluas ini, saya ingin pergi melihatnya."],
+      ["HSK3", 203, "瘦", "shòu", "kurus", "你最近好像瘦了一点儿。", "Nǐ zuìjìn hǎoxiàng shòu le yīdiǎnr.", "Akhir-akhir ini kamu kelihatan agak kurus."],
+      ["HSK3", 204, "舒服", "shūfu", "nyaman, enak badan", "这张床睡起来很舒服。", "Zhè zhāng chuáng shuì qǐlái hěn shūfu.", "Tempat tidur ini sangat nyaman untuk tidur."],
+      ["HSK3", 205, "叔叔", "shūshu", "paman", "叔叔给我买了一个新书包。", "Shūshu gěi wǒ mǎi le yī gè xīn shūbāo.", "Paman membelikan tas sekolah baru untuk saya."],
+      ["HSK3", 206, "树", "shù", "pohon", "公园里有很多大树。", "Gōngyuán lǐ yǒu hěn duō dà shù.", "Di taman ada banyak pohon besar."],
+      ["HSK3", 207, "数学", "shùxué", "matematika", "哥哥的数学成绩非常好。", "Gēge de shùxué chéngjì fēicháng hǎo.", "Nilai matematika kakak laki-laki sangat bagus."],
+      ["HSK3", 208, "刷牙", "shuāyá", "menggosok gigi", "每天早晚都要刷牙。", "Měitiān zǎowǎn dōu yào shuāyá.", "Setiap pagi dan malam harus menggosok gigi."],
+      ["HSK3", 209, "双", "shuāng", "pasang (sepatu/sumpit/mata)", "我买了一双新运动鞋。", "Wǒ mǎi le yī shuāng xīn yùndòngxié.", "Saya membeli sepasang sepatu olahraga baru."],
+      ["HSK3", 210, "水平", "shuǐpíng", "tingkat, level, kemampuan", "你的汉语水平提高了很多。", "Nǐ de Hànyǔ shuǐpíng tígāo le hěn duō.", "Tingkat bahasa Mandarinmu meningkat pesat."],
+      ["HSK3", 211, "司机", "sījī", "sopir, pengemudi", "出租车司机很热情。", "Chūzūchē sījī hěn rèqíng.", "Sopir taksi itu sangat ramah."],
+      ["HSK3", 212, "太阳", "tàiyáng", "matahari", "今天太阳出来了，真暖和。", "Jīntiān tàiyáng chūlái le, zhēn nuǎnhuo.", "Hari ini matahari muncul, sungguh hangat."],
+      ["HSK3", 213, "特别", "tèbié", "khusus, istimewa / sangat", "我特别喜欢吃印尼炒饭。", "Wǒ tèbié xǐhuan chī Yìnní chǎofàn.", "Saya sangat suka makan nasi goreng Indonesia."],
+      ["HSK3", 214, "疼", "téng", "sakit, nyeri", "我今天有点儿头疼。", "Wǒ jīntiān yǒudiǎnr tóuténg.", "Hari ini kepala saya agak sakit."],
+      ["HSK3", 215, "提高", "tígāo", "meningkatkan", "多练习可以提高口语能力。", "Duō liànxí kěyǐ tígāo kǒuyǔ nénglì.", "Banyak berlatih dapat meningkatkan kemampuan bicara."],
+      ["HSK3", 216, "体育", "tǐyù", "olahraga, pendidikan jasmani", "下午我们有体育课。", "Xiàwǔ wǒmen yǒu tǐyù kè.", "Sore ini kami ada pelajaran olahraga."],
+      ["HSK3", 217, "甜", "tián", "manis", "这个西瓜又大又甜。", "Zhège xīguā yòu dà yòu tián.", "Semangka ini besar dan manis."],
+      ["HSK3", 218, "条", "tiáo", "satuan benda panjang (celana/jalan/ikan)", "河里有很多小鱼。", "Hé lǐ yǒu hěn duō xiǎo yú.", "Di sungai ada banyak ikan kecil."],
+      ["HSK3", 219, "同事", "tóngshì", "rekan kerja", "他是我公司的同事。", "Tā shì wǒ gōngsī de tóngshì.", "Dia adalah rekan kerja di perusahaan saya."],
+      ["HSK3", 220, "同意", "tóngyì", "setuju", "妈妈同意我周末去旅游。", "Māma tóngyì wǒ zhōumò qù lǚyóu.", "Ibu setuju saya pergi berwisata akhir pekan ini."],
+      ["HSK3", 221, "头发", "tóufa", "rambut", "妹妹的头发又黑又长。", "Mèimei de tóufa yòu hēi yòu cháng.", "Rambut adik perempuan hitam dan panjang."],
+      ["HSK3", 222, "突然", "tūrán", "tiba-tiba", "天突然下起大雨来了。", "Tiān tūrán xià qǐ dà yǔ lái le.", "Tiba-tiba turun hujan deras."],
+      ["HSK3", 223, "图书馆", "túshūguǎn", "perpustakaan", "下课后我常去图书馆看书。", "Xiàkè hòu wǒ cháng qù túshūguǎn kànshū.", "Setelah pulang kelas saya sering ke perpustakaan baca buku."],
+      ["HSK3", 224, "腿", "tuǐ", "kaki (tungkai)", "昨天爬山，今天腿很酸。", "Zuótiān páshān, jīntiān tuǐ hěn suān.", "Kemarin mendaki gunung, hari ini kaki pegal."],
+      ["HSK3", 225, "完成", "wánchéng", "menyelesaikan", "我按时完成了老师布置的作业。", "Wǒ ànshí wánchéng le lǎoshī bùzhì de zuòyè.", "Saya menyelesaikan PR dari guru tepat waktu."],
+      ["HSK3", 226, "碗", "wǎn", "mangkuk", "请给我一碗米饭。", "Qǐng gěi wǒ yī wǎn mǐfàn.", "Tolong beri saya semangkuk nasi."],
+      ["HSK3", 227, "万", "wàn", "sepuluh ribu", "这座城市有一百万人。", "Zhè zuò chéngshì yǒu yībǎi wàn rén.", "Kota ini berpenduduk satu juta orang."],
+      ["HSK3", 228, "忘记", "wàngjì", "lupa", "对不起，我忘记带钥匙了。", "Duìbuqǐ, wǒ wàngjì dài yàoshi le.", "Maaf, saya lupa membawa kunci."],
+      ["HSK3", 229, "为", "wèi", "untuk, demi", "我为你感到骄傲。", "Wǒ wèi nǐ gǎndào jiāo'ào.", "Saya merasa bangga padamu."],
+      ["HSK3", 230, "为了", "wèile", "demi, untuk tujuan", "为了学好汉语，他每天练习。", "Wèile xué hǎo Hànyǔ, tā měitiān liànxí.", "Demi menguasai Mandarin dengan baik, dia berlatih setiap hari."],
+      ["HSK3", 231, "位", "wèi", "kata satuan sopan untuk orang", "请问您是哪位？", "Qǐngwèn nín shì nǎ wèi?", "Permisi dengan siapa saya berbicara?"],
+      ["HSK3", 232, "文化", "wénhuà", "budaya, kebudayaan", "我非常喜欢中国茶文化。", "Wǒ fēicháng xǐhuan Zhōngguó chá wénhuà.", "Saya sangat menyukai budaya teh Tiongkok."],
+      ["HSK3", 233, "西", "xī", "barat", "太阳从西边落下。", "Tàiyáng cóng xībiān luò xià.", "Matahari terbenam di sebelah barat."],
+      ["HSK3", 234, "习惯", "xíguàn", "kebiasaan, terbiasa", "我已经习惯早睡早起了。", "Wǒ yǐjīng xíguàn zǎo shuì zǎo qǐ le.", "Saya sudah terbiasa tidur awal dan bangun pagi."],
+      ["HSK3", 235, "洗手间", "xǐshǒujiān", "toilet, kamar kecil", "请问洗手间在哪里？", "Qǐngwèn xǐshǒujiān zài nǎlǐ?", "Permisi di mana letak toilet?"],
+      ["HSK3", 236, "洗澡", "xǐzǎo", "mandi", "运动完以后我要去洗澡。", "Yùndòng wán yǐhòu wǒ yào qù xǐzǎo.", "Setelah selesai olahraga saya mau pergi mandi."],
+      ["HSK3", 237, "夏", "xià", "musim panas", "夏天大家喜欢去海边。", "Xiàtiān dàjiā xǐhuan qù hǎibiān.", "Musim panas semua orang suka pergi ke pantai."],
+      ["HSK3", 238, "先", "xiān", "terlebih dahulu, duluan", "你先走吧，我一会儿就到。", "Nǐ xiān zǒu ba, wǒ yīhuìr jiù dào.", "Kamu jalan duluan saja, sebentar lagi saya sampai."],
+      ["HSK3", 239, "香蕉", "xiāngjiāo", "pisang", "小猴子最喜欢吃香蕉。", "Xiǎo hóuzi zuì xǐhuan chī xiāngjiāo.", "Monyet kecil paling suka makan pisang."],
+      ["HSK3", 240, "相信", "xiāngxìn", "percaya, meyakini", "我相信你一定能考好。", "Wǒ xiāngxìn nǐ yīdìng néng kǎo hǎo.", "Saya percaya kamu pasti bisa mengerjakan ujian dengan baik."],
+      ["HSK3", 241, "向", "xiàng", "ke arah, kepada", "请向右转。", "Qǐng xiàng yòu zhuǎn.", "Silakan belok ke arah kanan."],
+      ["HSK3", 242, "像", "xiàng", "mirip, seperti", "妹妹长得非常像妈妈。", "Mèimei zhǎng de fēicháng xiàng māma.", "Adik perempuan wajahnya sangat mirip ibu."],
+      ["HSK3", 243, "小心", "xiǎoxīn", "hati-hati", "路上车多，过马路要小心。", "Lùshàng chē duō, guò mǎlù yào xiǎoxīn.", "Di jalan banyak mobil, menyeberang jalan harus hati-hati."],
+      ["HSK3", 244, "校长", "xiàozhǎng", "kepala sekolah / rektor", "校长正在给新生讲话。", "Xiàozhǎng zhèngzài gěi xīnshēng jiǎnghuà.", "Kepala sekolah sedang berpidato kepada murid baru."],
+      ["HSK3", 245, "新闻", "xīnwén", "berita", "爸爸每天晚上看新闻。", "Bàba měitiān wǎnshang kàn xīnwén.", "Ayah menonton berita setiap malam."],
+      ["HSK3", 246, "新鲜", "xīnxiān", "segar", "早上的空气非常新鲜。", "Zǎoshang de kōngqì fēicháng xīnxiān.", "Udara pagi hari sangat segar."],
+      ["HSK3", 247, "信用卡", "xìnyòngkǎ", "kartu kredit", "这家商店可以用信用卡付款。", "Zhè jiā shāngdiàn kěyǐ yòng xìnyòngkǎ fùkuǎn.", "Toko ini bisa membayar menggunakan kartu kredit."],
+      ["HSK3", 248, "行李箱", "xínglixiāng", "koper", "我已经把衣服放进行李箱了。", "Wǒ yǐjīng bǎ yīfu fàng jìn xínglixiāng le.", "Saya sudah memasukkan baju ke dalam koper."],
+      ["HSK3", 249, "熊猫", "xióngmāo", "panda", "大熊猫是中国的国宝。", "Dà xióngmāo shì Zhōngguó de guóbǎo.", "Panda raksasa adalah hewan pusaka nasional Tiongkok."],
+      ["HSK3", 250, "需要", "xūyào", "membutuhkan, perlu", "你需要我帮你做什么？", "Nǐ xūyào wǒ bāng nǐ zuò shénme?", "Apa yang kamu butuhkan untuk saya bantu?"],
+      ["HSK3", 251, "选择", "xuǎnzé", "memilih, pilihan", "你可以选择自己喜欢的颜色。", "Nǐ kěyǐ xuǎnzé zìjǐ xǐhuan de yánsè.", "Kamu boleh memilih warna yang kamu suka."],
+      ["HSK3", 252, "要求", "yāoqiú", "syarat, tuntutan, meminta", "老师对我们的要求很严格。", "Lǎoshī duì wǒmen de yāoqiú hěn yángé.", "Tuntutan guru terhadap kami sangat ketat."],
+      ["HSK3", 253, "爷爷", "yéye", "kakek", "爷爷喜欢在公园里下棋。", "Yéye xǐhuan zài gōngyuán lǐ xiàqí.", "Kakek suka bermain catur di taman."],
+      ["HSK3", 254, "一定", "yīdìng", "pasti, tentu", "明天我一定准时到。", "Míngtiān wǒ yīdìng zhǔnshí dào.", "Besok saya pasti datang tepat waktu."],
+      ["HSK3", 255, "一共", "yīgòng", "total, semuanya", "这些水果一共五十块钱。", "Zhèxiē shuǐguǒ yīgòng wǔshí kuài qián.", "Buah-buahan ini totalnya lima puluh yuan."],
+      ["HSK3", 256, "一会儿", "yīhuìr", "sebentar", "我休息一会儿再继续工作。", "Wǒ xiūxi yīhuìr zài jìxù gōngzuò.", "Saya istirahat sebentar lalu lanjut bekerja."],
+      ["HSK3", 257, "一样", "yīyàng", "sama", "哥哥和弟弟长得一样高。", "Gēge hé dìdi zhǎng de yīyàng gāo.", "Kakak dan adik tingginya sama."],
+      ["HSK3", 258, "以前", "yǐqián", "sebelumnya, dulu", "来中国以前，我不会说汉语。", "Lái Zhōngguó yǐqián, wǒ bù huì shuō Hànyǔ.", "Sebelum datang ke Tiongkok, saya tidak bisa berbahasa Mandarin."],
+      ["HSK3", 259, "一般", "yībān", "biasanya, pada umumnya", "我一般早上七点吃早饭。", "Wǒ yībān zǎoshang qī diǎn chī zǎofàn.", "Saya biasanya sarapan jam 7 pagi."],
+      ["HSK3", 260, "一边", "yībiān", "sambil (melakukan dua hal)", "他喜欢一边听音乐一边跑步。", "Tā xǐhuan yībiān tīng yīnyuè yībiān pǎobù.", "Dia suka berlari sambil mendengarkan musik."],
+      ["HSK3", 261, "一直", "yīzhí", "selalu, terus-menerus / lurus", "从这里一直往前走就是银行。", "Cóng zhèlǐ yīzhí wǎng qián zǒu jiù shì yínháng.", "Dari sini jalan lurus ke depan adalah bank."],
+      ["HSK3", 262, "音乐", "yīnyuè", "musik", "听音乐能让我放松心情。", "Tīng yīnyuè néng ràng wǒ fàngsōng xīnqíng.", "Mendengarkan musik membuat hati saya rileks."],
+      ["HSK3", 263, "银行", "yínháng", "bank", "我去银行取点儿钱。", "Wǒ qù yínháng qǔ diǎnr qián.", "Saya pergi ke bank mengambil sedikit uang."],
+      ["HSK3", 264, "饮料", "yǐnliào", "minuman (ringan)", "少喝甜饮料，多喝白开水。", "Shǎo hē tián yǐnliào, duō hē báikāishuǐ.", "Kurangi minuman manis, perbanyak air putih."],
+      ["HSK3", 265, "应该", "yīnggāi", "seharusnya, sebaiknya", "下雨了，你应该带把伞。", "Xià yǔ le, nǐ yīnggāi dài bǎ sǎn.", "Turun hujan, kamu sebaiknya membawa payung."],
+      ["HSK3", 266, "影响", "yǐngxiǎng", "mempengaruhi, pengaruh", "玩手机会影响睡眠质量。", "Wán shǒujī huì yǐngxiǎng shuìmián zhìliàng.", "Main HP dapat mempengaruhi kualitas tidur."],
+      ["HSK3", 267, "用", "yòng", "menggunakan, memakai", "请用黑色钢笔填写表格。", "Qǐng yòng hēisè gāngbǐ tiánxiě biǎogé.", "Silakan isi formulir menggunakan pena hitam."],
+      ["HSK3", 268, "游戏", "yóuxì", "permainan, game", "别花太多时间玩电脑游戏。", "Bié huā tài duō shíjiān wán diànnǎo yóuxì.", "Jangan habiskan terlalu banyak waktu bermain game komputer."],
+      ["HSK3", 269, "有名", "yǒumíng", "terkenal", "长城是世界上非常有名的景点。", "Chángchéng shì shìjiè shàng fēicháng yǒumíng de jǐngdiǎn.", "Tembok Besar adalah tempat wisata yang sangat terkenal di dunia."],
+      ["HSK3", 270, "又", "yòu", "lagi (sudah terjadi / dan juga)", "今天又下雨了。", "Jīntiān yòu xià yǔ le.", "Hari ini turun hujan lagi."],
+      ["HSK3", 271, "遇到", "yùdào", "bertemu (kebetulan), menghadapi", "我在超市遇到了我的小学同学。", "Wǒ zài chāoshì yùdào le wǒ de xiǎoxué tóngxué.", "Saya bertemu teman SD saya di supermarket."],
+      ["HSK3", 272, "元", "yuán", "yuan (mata uang resmi Tiongkok)", "这本词典五十元。", "Zhè běn cídiǎn wǔshí yuán.", "Kamus ini harganya lima puluh yuan."],
+      ["HSK3", 273, "愿意", "yuànyì", "bersedia, mau", "我很愿意帮助你学习汉语。", "Wǒ hěn yuànyì bāngzhù nǐ xuéxí Hànyǔ.", "Saya sangat bersedia membantumu belajar Mandarin."],
+      ["HSK3", 274, "月亮", "yuèliang", "bulan (di langit)", "今晚的月亮又大又圆。", "Jīnwǎn de yuèliang yòu dà yòu yuán.", "Bulan malam ini besar dan bulat."],
+      ["HSK3", 275, "越", "yuè", "semakin", "雨越下越大了。", "Yǔ yuè xià yuè dà le.", "Hujan turun semakin lama semakin deras."],
+      ["HSK3", 276, "站", "zhàn", "stasiun, halte / berdiri", "下一站是北京站。", "Xià yī zhàn shì Běijīng zhàn.", "Stasiun berikutnya adalah Stasiun Beijing."],
+      ["HSK3", 277, "张", "zhāng", "lembar (satuan kertas/meja/foto)", "桌子上有一张白纸。", "Zhuōzi shàng yǒu yī zhāng báizhǐ.", "Di atas meja ada selembar kertas putih."],
+      ["HSK3", 278, "长(动词)", "zhǎng", "tumbuh, bertambah besar", "一年不见，你长高了很多。", "Yī nián bù jiàn, nǐ zhǎng gāo le hěn duō.", "Setahun tidak bertemu, kamu tumbuh tinggi sekali."],
+      ["HSK3", 279, "着急", "zháojí", "cemas, terburu-buru", "别着急，时间还早呢。", "Bié zháojí, shíjiān hái zǎo ne.", "Jangan terburu-buru, waktunya masih pagi."],
+      ["HSK3", 280, "照顾", "zhàogù", "merawat, menjaga", "妈妈生病了，我在家照顾她。", "Māma shēngbìng le, wǒ zài jiā zhàogù tā.", "Ibu sedang sakit, saya di rumah merawatnya."],
+      ["HSK3", 281, "照片", "zhàopiàn", "foto", "这张照片拍得真好看。", "Zhè zhāng zhàopiàn pāi de zhēn hǎokàn.", "Foto ini diambil dengan sangat bagus."],
+      ["HSK3", 282, "照相机", "zhàoxiàngjī", "kamera", "旅游时我带着照相机。", "Lǚyóu shí wǒ dài zhe zhàoxiàngjī.", "Saat berwisata saya membawa kamera."],
+      ["HSK3", 283, "只(量词)", "zhī", "ekor (kata satuan hewan/sebelah)", "树上有两只小鸟。", "Shù shàng yǒu liǎng zhī xiǎo niǎo.", "Di atas pohon ada dua ekor burung kecil."],
+      ["HSK3", 284, "只(副词)", "zhǐ", "hanya", "我只学了三个月汉语。", "Wǒ zhǐ xué le sān gè yuè Hànyǔ.", "Saya baru belajar Mandarin selama tiga bulan."],
+      ["HSK3", 285, "只有……才……", "zhǐyǒu...cái...", "hanya jika... barulah...", "只有努力学习，才能取得好成绩。", "Zhǐyǒu nǔlì xuéxí, cái néng qǔdé hǎo chéngjì.", "Hanya jika belajar giat, barulah bisa meraih nilai bagus."],
+      ["HSK3", 286, "中文", "Zhōngwén", "bahasa Mandarin (tulisan/umum)", "我会看中文报纸。", "Wǒ huì kàn Zhōngwén bàozhǐ.", "Saya bisa membaca koran berbahasa Mandarin."],
+      ["HSK3", 287, "中间", "zhōngjiān", "tengah, di antara", "我坐在爸爸和妈妈中间。", "Wǒ zuò zài bàba hé māma zhōngjiān.", "Saya duduk di tengah-tengah ayah dan ibu."],
+      ["HSK3", 288, "终于", "zhōngyú", "akhirnya", "经过努力，他终于考上了大学。", "Jīngguò nǔlì, tā zhōngyú kǎo shàng le dàxué.", "Setelah berusaha, dia akhirnya lulus masuk universitas."],
+      ["HSK3", 289, "种", "zhǒng", "jenis, macam", "商店里有各种各样的水果。", "Shāngdiàn lǐ yǒu gèzhǒng gèyàng de shuǐguǒ.", "Di toko ada berbagai macam jenis buah."],
+      ["HSK3", 290, "重要", "zhòngyào", "penting", "身体健康是最重要的。", "Shēntǐ jiànkāng shì zuì zhòngyào de.", "Kesehatan tubuh adalah yang paling penting."],
+      ["HSK3", 291, "周末", "zhōumò", "akhir pekan", "周末你一般怎么过？", "Zhōumò nǐ yībān zěnme guò?", "Bagaimana kamu biasanya menghabiskan akhir pekan?"],
+      ["HSK3", 292, "主要", "zhǔyào", "utama, pokok", "这本书主要讲中国历史。", "Zhè běn shū zhǔyào jiǎng Zhōngguó lìshǐ.", "Buku ini terutama membahas sejarah Tiongkok."],
+      ["HSK3", 293, "注意", "zhùyì", "memperhatikan, berhati-hati", "天气变化大，请注意身体。", "Tiānqì biànhuà dà, qǐng zhùyì shēntǐ.", "Perubahan cuaca besar, harap jaga kesehatan."],
+      ["HSK3", 294, "自己", "zìjǐ", "diri sendiri", "自己的事情要自己做。", "Zìjǐ de shìqing yào zìjǐ zuò.", "Urusan diri sendiri harus dikerjakan sendiri."],
+      ["HSK3", 295, "自行车", "zìxíngchē", "sepeda", "骑自行车既环保又健康。", "Qí zìxíngchē jì huánbǎo yòu jiànkāng.", "Naik sepeda ramah lingkungan sekaligus sehat."],
+      ["HSK3", 296, "总是", "zǒngshì", "selalu", "他总是第一个到教室。", "Tā zǒngshì dì-yī gè dào jiàoshì.", "Dia selalu menjadi orang pertama yang tiba di kelas."],
+      ["HSK3", 297, "嘴", "zuǐ", "mulut", "吃饭的时候不要张着嘴说话。", "Chīfàn de shíhou bùyào zhāng zhe zuǐ shuōhuà.", "Saat makan jangan berbicara dengan mulut penuh."],
+      ["HSK3", 298, "最后", "zuìhòu", "terakhir, akhirnya", "这是今天的最后一个问题。", "Zhè shì jīntiān de zuìhòu yī gè wèntí.", "Ini adalah pertanyaan terakhir hari ini."],
+      ["HSK3", 299, "最近", "zuìjìn", "akhir-akhir ini, belakangan ini", "你最近工作忙不忙？", "Nǐ zuìjìn gōngzuò máng bù máng?", "Apakah pekerjaanmu sibuk akhir-akhir ini?"],
+      ["HSK3", 300, "作业", "zuòyè", "pekerjaan rumah (PR), tugas", "我每天晚上八点写作业。", "Wǒ měitiān wǎnshang bā diǎn xiě zuòyè.", "Saya mengerjakan PR setiap jam 8 malam."]
+    ];
+
+    // =========================================================================
+    // 2. STATE APLIKASI & PENYIMPANAN LOKAL (LOCALSTORAGE)
+    // =========================================================================
+    let allCards = [];
+    let filteredCards = [];
+    let currentIndex = 0;
+    let isFlipped = false;
+    let showPinyin = true;
+    let currentLevelFilter = 'ALL';
+    let currentViewMode = 'card';
+    let progressMap = {}; // { cardId: 'new' | 'review' | 'learning' | 'mastered' }
+    let customCards = [];
+    let autoPlayTimer = null;
+    let isAutoPlaying = false;
+    const ttsAudioCache = {}; // Cache audio HD Gemini TTS agar hemat & instan
+
+    function loadStorage() {
+      try {
+        const savedProgress = localStorage.getItem('mandarin_flashcard_progress_v1');
+        if (savedProgress) progressMap = JSON.parse(savedProgress);
+
+        const savedCustom = localStorage.getItem('mandarin_flashcard_custom_v1');
+        if (savedCustom) customCards = JSON.parse(savedCustom);
+
+        const savedTheme = localStorage.getItem('mandarin_flashcard_theme');
+        if (savedTheme === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.getElementById('btn-theme').textContent = '☀️';
+        }
+      } catch (e) {
+        console.warn('LocalStorage tidak tersedia:', e);
+      }
+    }
+
+    function saveProgress() {
+      try {
+        localStorage.setItem('mandarin_flashcard_progress_v1', JSON.stringify(progressMap));
+      } catch (e) {}
+    }
+
+    function saveCustomCards() {
+      try {
+        localStorage.setItem('mandarin_flashcard_custom_v1', JSON.stringify(customCards));
+      } catch (e) {}
+    }
+
+    function initData() {
+      loadStorage();
+      const baseCards = RAW_VOCAB_DATA.map(item => ({
+        id: `${item[0]}_${item[1]}`,
+        level: item[0],
+        num: item[1],
+        hanzi: item[2],
+        pinyin: item[3],
+        meaning: item[4],
+        exHanzi: item[5],
+        exPinyin: item[6],
+        exMeaning: item[7]
+      }));
+
+      allCards = [...baseCards, ...customCards];
+      updateStatsUI();
+      applyFilters();
+    }
+
+    // =========================================================================
+    // 3. SISTEM AUDIO PEMBACA MANDARIN (WEB SPEECH API + GEMINI HD TTS)
+    // =========================================================================
+    let zhVoice = null;
+
+    function loadVoices() {
+      if (!('speechSynthesis' in window)) return;
+      const voices = window.speechSynthesis.getVoices();
+      // Prioritaskan suara Mandarin (zh-CN / cmn-Hans-CN)
+      zhVoice =
+        voices.find(v => v.lang === 'zh-CN' && v.name.includes('Google')) ||
+        voices.find(v => v.lang === 'zh-CN' || v.lang === 'cmn-Hans-CN') ||
+        voices.find(v => v.lang.startsWith('zh'));
+    }
+
+    if ('speechSynthesis' in window) {
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    // Bersihkan catatan tata bahasa seperti "(动词)" atau "……" sebelum dibaca TTS
+    function cleanTextForSpeech(text) {
+      return text
+        .replace(/\(.*?\)/g, '')
+        .replace(/（.*?）/g, '')
+        .replace(/…+/g, '，')
+        .replace(/\.{2,}/g, '，')
+        .trim();
+    }
+
+    function speakMandarin(text, rate = 1.0) {
+      const cleanText = cleanTextForSpeech(text);
+      if (!cleanText) return;
+
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'zh-CN';
+        utterance.rate = rate;
+        utterance.pitch = 1.0;
+        if (zhVoice) utterance.voice = zhVoice;
+
+        utterance.onerror = () => {
+          showToast('Browser tidak mendukung suara Mandarin bawaan. Coba tombol "✨ Suara HD".', 'amber');
+        };
+        window.speechSynthesis.speak(utterance);
+      } else {
+        speakWithGeminiTTS(cleanText);
+      }
+    }
+
+    function speakCurrentWord(rate = 1.0) {
+      const card = filteredCards[currentIndex];
+      if (card) speakMandarin(card.hanzi, rate);
+    }
+
+    function speakCurrentExample(rate = 1.0) {
+      const card = filteredCards[currentIndex];
+      if (card && card.exHanzi) speakMandarin(card.exHanzi, rate);
+    }
+
+    // Konversi PCM16 ke WAV untuk Gemini TTS
+    function base64ToArrayBuffer(base64) {
+      const binaryString = atob(base64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    function pcmToWav(pcm16, sampleRate = 24000) {
+      const numChannels = 1;
+      const byteRate = sampleRate * numChannels * 2;
+      const blockAlign = numChannels * 2;
+      const dataSize = pcm16.length * 2;
+      const buffer = new ArrayBuffer(44 + dataSize);
+      const view = new DataView(buffer);
+
+      const writeString = (offset, str) => {
+        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+      };
+
+      writeString(0, 'RIFF');
+      view.setUint32(4, 36 + dataSize, true);
+      writeString(8, 'WAVE');
+      writeString(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, byteRate, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, 16, true);
+      writeString(36, 'data');
+      view.setUint32(40, dataSize, true);
+
+      let offset = 44;
+      for (let i = 0; i < pcm16.length; i++, offset += 2) {
+        view.setInt16(offset, pcm16[i], true);
+      }
+      return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    async function speakWithGeminiTTS(overrideText = null) {
+      const card = filteredCards[currentIndex];
+      const textToRead = cleanTextForSpeech(overrideText || (card ? card.hanzi : ''));
+      if (!textToRead) return;
+
+      if (ttsAudioCache[textToRead]) {
+        const audio = new Audio(ttsAudioCache[textToRead]);
+        audio.play();
+        return;
+      }
+
+      const btn = document.getElementById('btn-hd-tts');
+      const originalHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span><span>Memuat...</span>';
+      }
+
+      try {
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+        const payload = {
+          contents: [{
+            parts: [{ text: `Pronounce clearly in standard Mandarin Chinese: ${textToRead}` }]
+          }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: "Aoede" }
+              }
+            }
+          },
+          model: "gemini-2.5-flash-preview-tts"
+        };
+
+        const response = await fetchWithRetry(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        const part = result?.candidates?.[0]?.content?.parts?.[0];
+        const audioData = part?.inlineData?.data;
+        const mimeType = part?.inlineData?.mimeType;
+
+        if (audioData && mimeType && mimeType.startsWith('audio/')) {
+          const rateMatch = mimeType.match(/rate=(\d+)/);
+          const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+          const pcmBuffer = base64ToArrayBuffer(audioData);
+          const pcm16 = new Int16Array(pcmBuffer);
+          const wavBlob = pcmToWav(pcm16, sampleRate);
+          const audioUrl = URL.createObjectURL(wavBlob);
+          ttsAudioCache[textToRead] = audioUrl;
+
+          const audio = new Audio(audioUrl);
+          audio.play();
+        } else {
+          throw new Error('Format audio tidak valid');
+        }
+      } catch (err) {
+        speakMandarin(textToRead, 0.9);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }
+      }
+    }
+
+    // =========================================================================
+    // 4. INTEGRASI GEMINI AI (CONTOH TAMBAHAN & AUTO-FILL KATA BARU)
+    // =========================================================================
+    async function fetchWithRetry(url, options, maxRetries = 3) {
+      let delay = 1000;
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          const res = await fetch(url, options);
+          if (res.ok) return res;
+        } catch (e) {}
+        await new Promise(r => setTimeout(r, delay));
+        delay *= 2;
+      }
+      return fetch(url, options);
+    }
+
+    async function generateAIExamples() {
+      const card = filteredCards[currentIndex];
+      if (!card) return;
+
+      const btn = document.getElementById('btn-ai-more');
+      const box = document.getElementById('ai-extra-box');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ Sedang membuat contoh & tips hafal dengan AI...</span>';
+      box.classList.remove('hidden');
+      box.innerHTML = '<p class="text-slate-500 animate-pulse">Menghubungi tutor Mandarin AI...</p>';
+
+      try {
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+        const prompt = `Saya sedang belajar kosakata Mandarin: "${card.hanzi}" (pinyin: ${card.pinyin}, arti: ${card.meaning}). Berikan 2 contoh kalimat sehari-hari yang berbeda dari "${card.exHanzi}" beserta pinyin dan terjemahan bahasa Indonesia, serta 1 tips singkat cara mengingat karakter/artinya.`;
+
+        const payload = {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                examples: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      hanzi: { type: "STRING" },
+                      pinyin: { type: "STRING" },
+                      meaning: { type: "STRING" }
+                    },
+                    required: ["hanzi", "pinyin", "meaning"]
+                  }
+                },
+                memoryTip: { type: "STRING" }
+              },
+              required: ["examples", "memoryTip"]
+            }
+          }
+        };
+
+        const response = await fetchWithRetry(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const parsed = JSON.parse(jsonText);
+
+        let html = `<div class="font-bold text-indigo-700 dark:text-indigo-300 mb-1">💡 Tips Mengingat:</div>
+                    <p class="text-slate-700 dark:text-slate-300 mb-2.5">${escapeHtml(parsed.memoryTip)}</p>
+                    <div class="font-bold text-indigo-700 dark:text-indigo-300 mb-1">🗣️ Contoh Kalimat Tambahan:</div>`;
+
+        parsed.examples.forEach((ex, idx) => {
+          const safeHanzi = ex.hanzi.replace(/'/g, "\\'");
+          html += `
+            <div class="p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-indigo-100 dark:border-indigo-900/40 flex items-start justify-between gap-2">
+              <div>
+                <div class="font-chinese font-bold text-sm text-slate-900 dark:text-white">${idx + 1}. ${escapeHtml(ex.hanzi)}</div>
+                <div class="text-amber-700 dark:text-amber-300">${escapeHtml(ex.pinyin)}</div>
+                <div class="text-slate-600 dark:text-slate-400">"${escapeHtml(ex.meaning)}"</div>
+              </div>
+              <button onclick="speakMandarin('${safeHanzi}', 0.95)" class="px-2 py-1 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-200 text-xs font-semibold shrink-0">
+                🔊
+              </button>
+            </div>
+          `;
+        });
+
+        box.innerHTML = html;
+      } catch (error) {
+        box.innerHTML = '<p class="text-rose-600">Maaf, gagal memuat contoh tambahan dari AI. Silakan coba lagi.</p>';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>✨ Minta 2 Contoh Kalimat Lain & Tips Hafal (AI)</span>';
+      }
+    }
+
+    async function autoFillNewWordWithAI() {
+      const hanziInput = document.getElementById('new-hanzi').value.trim();
+      const meaningInput = document.getElementById('new-meaning').value.trim();
+
+      if (!hanziInput && !meaningInput) {
+        showToast('Masukkan Hanzi atau Arti Indonesia terlebih dahulu!', 'amber');
+        return;
+      }
+
+      const btn = document.getElementById('btn-ai-autofill');
+      btn.disabled = true;
+      btn.textContent = '⏳ Memproses...';
+
+      try {
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+        const query = hanziInput
+          ? `Lengkapi informasi kosakata Mandarin "${hanziInput}" dalam bahasa Indonesia.`
+          : `Terjemahkan kata bahasa Indonesia "${meaningInput}" ke kosakata Mandarin sehari-hari yang paling umum beserta contoh kalimatnya.`;
+
+        const payload = {
+          contents: [{ parts: [{ text: query }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                hanzi: { type: "STRING" },
+                pinyin: { type: "STRING" },
+                meaning: { type: "STRING" },
+                exHanzi: { type: "STRING" },
+                exPinyin: { type: "STRING" },
+                exMeaning: { type: "STRING" }
+              },
+              required: ["hanzi", "pinyin", "meaning", "exHanzi", "exPinyin", "exMeaning"]
+            }
+          }
+        };
+
+        const response = await fetchWithRetry(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        const data = JSON.parse(result.candidates[0].content.parts[0].text);
+
+        document.getElementById('new-hanzi').value = data.hanzi;
+        document.getElementById('new-pinyin').value = data.pinyin;
+        document.getElementById('new-meaning').value = data.meaning;
+        document.getElementById('new-ex-hanzi').value = data.exHanzi;
+        document.getElementById('new-ex-pinyin').value = data.exPinyin;
+        document.getElementById('new-ex-meaning').value = data.exMeaning;
+        showToast('Berhasil dilengkapi otomatis oleh AI!', 'emerald');
+      } catch (e) {
+        showToast('Gagal menghubungi AI. Anda tetap bisa mengisi manual.', 'rose');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✨ Isi Otomatis AI';
+      }
+    }
+
+    // =========================================================================
+    // 5. LOGIKA FILTER, NAVIGASI KARTU & RENDER UI
+    // =========================================================================
+    function getCardStatus(id) {
+      return progressMap[id] || 'new';
+    }
+
+    function updateStatsUI() {
+      let reviewCount = 0;
+      let masteredCount = 0;
+
+      allCards.forEach(c => {
+        const st = getCardStatus(c.id);
+        if (st === 'review') reviewCount++;
+        if (st === 'mastered') masteredCount++;
+      });
+
+      document.getElementById('stat-review').textContent = reviewCount;
+      document.getElementById('stat-mastered').textContent = masteredCount;
+      document.getElementById('stat-total').textContent = allCards.length;
+      document.getElementById('custom-count').textContent = customCards.length;
+
+      const pct = allCards.length > 0 ? Math.round((masteredCount / allCards.length) * 100) : 0;
+      document.getElementById('mastery-percent').textContent = `${pct}% Hafal`;
+    }
+
+    function setLevelFilter(level) {
+      currentLevelFilter = level;
+      document.querySelectorAll('.level-tab').forEach(btn => {
+        if (btn.dataset.level === level) {
+          btn.className = 'level-tab px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold bg-rose-600 text-white transition';
+        } else {
+          btn.className = 'level-tab px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium bg-stone-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700 transition';
+        }
+      });
+      applyFilters();
+    }
+
+    // Hapus tanda nada Pinyin agar pencarian seperti "wo" atau "nihao" tetap cocok
+    function normalizePinyin(str) {
+      return str
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ü/g, 'u')
+        .replace(/\s+/g, '');
+    }
+
+    function applyFilters() {
+      const searchRaw = document.getElementById('search-input').value.trim();
+      const searchLower = searchRaw.toLowerCase();
+      const searchNorm = normalizePinyin(searchRaw);
+      const statusFilter = document.getElementById('status-filter').value;
+
+      document.getElementById('clear-search').classList.toggle('hidden', searchRaw.length === 0);
+
+      filteredCards = allCards.filter(card => {
+        if (currentLevelFilter !== 'ALL' && card.level !== currentLevelFilter) return false;
+        if (statusFilter !== 'ALL' && getCardStatus(card.id) !== statusFilter) return false;
+
+        if (searchRaw) {
+          const matchHanzi = card.hanzi.includes(searchRaw);
+          const matchMeaning = card.meaning.toLowerCase().includes(searchLower);
+          const matchPinyin =
+            card.pinyin.toLowerCase().includes(searchLower) ||
+            normalizePinyin(card.pinyin).includes(searchNorm);
+          if (!matchHanzi && !matchMeaning && !matchPinyin) return false;
+        }
+        return true;
+      });
+
+      currentIndex = 0;
+      isFlipped = false;
+      renderCurrentCard();
+      renderListView();
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      applyFilters();
+    }
+
+    function resetAllFilters() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('status-filter').value = 'ALL';
+      setLevelFilter('ALL');
+    }
+
+    function shuffleDeck() {
+      if (filteredCards.length <= 1) return;
+      for (let i = filteredCards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [filteredCards[i], filteredCards[j]] = [filteredCards[j], filteredCards[i]];
+      }
+      currentIndex = 0;
+      isFlipped = false;
+      renderCurrentCard();
+      renderListView();
+      showToast('Urutan kartu berhasil diacak!', 'slate');
+    }
+
+    function renderCurrentCard() {
+      const emptyEl = document.getElementById('empty-state');
+      const wrapperEl = document.getElementById('card-wrapper');
+      const dockEl = document.getElementById('controls-dock');
+      const flashcardEl = document.getElementById('flashcard');
+
+      if (filteredCards.length === 0) {
+        emptyEl.classList.remove('hidden');
+        wrapperEl.classList.add('hidden');
+        dockEl.classList.add('hidden');
+        document.getElementById('deck-counter').textContent = '0 kartu ditemukan';
+        document.getElementById('progress-bar').style.width = '0%';
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+      wrapperEl.classList.remove('hidden');
+      dockEl.classList.remove('hidden');
+
+      const card = filteredCards[currentIndex];
+      const status = getCardStatus(card.id);
+
+      // Reset flip state & AI box
+      flashcardEl.classList.toggle('rotate-y-180', isFlipped);
+      document.getElementById('ai-extra-box').classList.add('hidden');
+      document.getElementById('ai-extra-box').innerHTML = '';
+
+      // Counter & Progress
+      document.getElementById('deck-counter').textContent = `Kartu ${currentIndex + 1} dari ${filteredCards.length}`;
+      const progressPct = ((currentIndex + 1) / filteredCards.length) * 100;
+      document.getElementById('progress-bar').style.width = `${progressPct}%`;
+
+      // Sisi Depan
+      const levelLabel = card.level === 'CUSTOM' ? `Kata Saya • #${card.num}` : `${card.level.replace('HSK', 'HSK ')} • #${card.num}`;
+      document.getElementById('front-level').textContent = levelLabel;
+
+      const badgeEl = document.getElementById('front-status-badge');
+      if (status === 'mastered') {
+        badgeEl.textContent = '✅ Sudah Hafal';
+        badgeEl.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300';
+      } else if (status === 'review') {
+        badgeEl.textContent = '🔔 Perlu Diulang';
+        badgeEl.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300';
+      } else if (status === 'learning') {
+        badgeEl.textContent = '🤔 Ragu-ragu';
+        badgeEl.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300';
+      } else {
+        badgeEl.textContent = '🆕 Baru';
+        badgeEl.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-stone-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
+      }
+
+      const frontHanziEl = document.getElementById('front-hanzi');
+      frontHanziEl.textContent = card.hanzi;
+      // Sesuaikan ukuran huruf jika frasa panjang seperti "因为……所以……"
+      if (card.hanzi.length >= 6) {
+        frontHanziEl.className = 'font-chinese text-3xl sm:text-5xl font-bold tracking-wide text-slate-900 dark:text-white select-all leading-snug';
+      } else if (card.hanzi.length >= 4) {
+        frontHanziEl.className = 'font-chinese text-4xl sm:text-6xl font-bold tracking-wide text-slate-900 dark:text-white select-all leading-snug';
+      } else {
+        frontHanziEl.className = 'font-chinese text-5xl sm:text-7xl font-bold tracking-wide text-slate-900 dark:text-white select-all leading-snug';
+      }
+
+      const frontPinyinEl = document.getElementById('front-pinyin');
+      frontPinyinEl.textContent = card.pinyin;
+      frontPinyinEl.classList.toggle('opacity-0', !showPinyin);
+
+      // Sisi Belakang
+      document.getElementById('back-hanzi').textContent = card.hanzi;
+      document.getElementById('back-pinyin').textContent = card.pinyin;
+      document.getElementById('back-meaning').textContent = card.meaning;
+      document.getElementById('back-ex-hanzi').textContent = card.exHanzi || '-';
+      document.getElementById('back-ex-pinyin').textContent = card.exPinyin || '';
+      document.getElementById('back-ex-meaning').textContent = card.exMeaning ? `"${card.exMeaning}"` : '';
+    }
+
+    function flipCard() {
+      if (filteredCards.length === 0) return;
+      isFlipped = !isFlipped;
+      document.getElementById('flashcard').classList.toggle('rotate-y-180', isFlipped);
+    }
+
+    function nextCard() {
+      if (filteredCards.length === 0) return;
+      isFlipped = false;
+      currentIndex = (currentIndex + 1) % filteredCards.length;
+      renderCurrentCard();
+    }
+
+    function prevCard() {
+      if (filteredCards.length === 0) return;
+      isFlipped = false;
+      currentIndex = (currentIndex - 1 + filteredCards.length) % filteredCards.length;
+      renderCurrentCard();
+    }
+
+    function markCardStatus(status) {
+      const card = filteredCards[currentIndex];
+      if (!card) return;
+      progressMap[card.id] = status;
+      saveProgress();
+      updateStatsUI();
+
+      if (status === 'review') {
+        showToast(`"${card.hanzi}" ditandai Perlu Diulang 🔔`, 'rose');
+      } else if (status === 'mastered') {
+        showToast(`Mantap! "${card.hanzi}" ditandai Sudah Hafal ✅`, 'emerald');
+      }
+
+      // Lanjut otomatis ke kartu berikutnya agar belajar lancar
+      if (filteredCards.length > 1) {
+        nextCard();
+      } else {
+        renderCurrentCard();
+      }
+      renderListView();
+    }
+
+    function togglePinyinVisibility() {
+      showPinyin = !showPinyin;
+      document.getElementById('btn-toggle-pinyin').textContent = showPinyin ? '👁️ Pinyin: Tampil' : '🙈 Pinyin: Sembunyi';
+      document.getElementById('front-pinyin').classList.toggle('opacity-0', !showPinyin);
+    }
+
+    // =========================================================================
+    // 6. MODE PUTAR OTOMATIS (AUDIO REMINDER PASSIVE LISTENING)
+    // =========================================================================
+    function toggleAutoPlay() {
+      const btn = document.getElementById('autoplay-btn');
+      if (isAutoPlaying) {
+        isAutoPlaying = false;
+        clearInterval(autoPlayTimer);
+        btn.innerHTML = '▶️ Auto';
+        showToast('Mode Putar Otomatis dihentikan.', 'slate');
+      } else {
+        if (filteredCards.length === 0) return;
+        isAutoPlaying = true;
+        btn.innerHTML = '⏹️ Stop';
+        showToast('Mode Audio Reminder aktif! Membaca kartu otomatis...', 'amber');
+        runAutoPlayStep();
+        autoPlayTimer = setInterval(() => {
+          if (!isAutoPlaying) return;
+          nextCard();
+          runAutoPlayStep();
+        }, 5500);
+      }
+    }
+
+    function runAutoPlayStep() {
+      const card = filteredCards[currentIndex];
+      if (!card) return;
+      speakMandarin(card.hanzi, 0.9);
+      setTimeout(() => {
+        if (!isAutoPlaying) return;
+        isFlipped = true;
+        document.getElementById('flashcard').classList.add('rotate-y-180');
+        if (card.exHanzi) speakMandarin(card.exHanzi, 0.9);
+      }, 1800);
+    }
+
+    // =========================================================================
+    // 7. TAMPILAN DAFTAR KOSA KATA (LIST VIEW)
+    // =========================================================================
+    function setViewMode(mode) {
+      currentViewMode = mode;
+      const cardBtn = document.getElementById('view-card-btn');
+      const listBtn = document.getElementById('view-list-btn');
+      const cardSec = document.getElementById('flashcard-section');
+      const listSec = document.getElementById('list-section');
+
+      if (mode === 'card') {
+        cardBtn.className = 'px-3 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-sm transition';
+        listBtn.className = 'px-3 py-1 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 transition';
+        cardSec.classList.remove('hidden');
+        listSec.classList.add('hidden');
+      } else {
+        listBtn.className = 'px-3 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-sm transition';
+        cardBtn.className = 'px-3 py-1 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 transition';
+        listSec.classList.remove('hidden');
+        cardSec.classList.add('hidden');
+        renderListView();
+      }
+    }
+
+    function renderListView() {
+      if (currentViewMode !== 'list') return;
+      const grid = document.getElementById('vocab-list-grid');
+      document.getElementById('list-count-label').textContent = `Menampilkan ${filteredCards.length} kosakata`;
+
+      // Render hingga 300 kartu pertama secara instan (atau semua jika <= 600)
+      const html = filteredCards.map((card, idx) => {
+        const st = getCardStatus(card.id);
+        const statusDot = st === 'mastered' ? '✅' : st === 'review' ? '🔔' : st === 'learning' ? '🤔' : '🆕';
+        const safeHanzi = card.hanzi.replace(/'/g, "\\'");
+        const safeEx = (card.exHanzi || '').replace(/'/g, "\\'");
+
+        return `
+          <div onclick="openCardFromList(${idx})" class="bg-white dark:bg-slate-900 rounded-2xl border border-stone-200 dark:border-slate-800 p-4 hover:border-rose-300 dark:hover:border-rose-800 cursor-pointer transition flex flex-col justify-between gap-2.5 shadow-sm">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-baseline gap-2.5 flex-wrap">
+                <span class="font-chinese text-2xl font-bold text-slate-900 dark:text-white">${escapeHtml(card.hanzi)}</span>
+                <span class="text-sm font-semibold text-rose-600 dark:text-rose-400">${escapeHtml(card.pinyin)}</span>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation()">
+                <span class="text-xs px-2 py-0.5 rounded-md bg-stone-100 dark:bg-slate-800 text-slate-500 font-medium">${card.level}</span>
+                <span title="Status">${statusDot}</span>
+                <button onclick="speakMandarin('${safeHanzi}', 0.95)" class="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 text-xs font-bold" title="Dengarkan kata">
+                  🔊
+                </button>
+              </div>
+            </div>
+
+            <div class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              ${escapeHtml(card.meaning)}
+            </div>
+
+            <div class="pt-2 border-t border-stone-100 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
+              <div class="space-y-0.5">
+                <div class="font-chinese font-semibold text-slate-800 dark:text-slate-200">${escapeHtml(card.exHanzi)}</div>
+                <div class="text-slate-500 dark:text-slate-400">${escapeHtml(card.exPinyin)} • ${escapeHtml(card.exMeaning)}</div>
+              </div>
+              <button onclick="event.stopPropagation(); speakMandarin('${safeEx}', 0.95)" class="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-semibold shrink-0" title="Baca contoh kalimat">
+                🔊 Contoh
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      grid.innerHTML = html || '<p class="text-center text-slate-500 col-span-2 py-8">Tidak ada kosakata ditemukan.</p>';
+    }
+
+    function openCardFromList(idx) {
+      currentIndex = idx;
+      isFlipped = false;
+      setViewMode('card');
+      renderCurrentCard();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // =========================================================================
+    // 8. MODAL TAMBAH KOSA KATA KUSTOM & UTILITAS UI
+    // =========================================================================
+    function openAddModal() {
+      document.getElementById('add-modal').classList.remove('hidden');
+    }
+
+    function closeAddModal() {
+      document.getElementById('add-modal').classList.add('hidden');
+    }
+
+    function saveNewWord() {
+      const hanzi = document.getElementById('new-hanzi').value.trim();
+      const pinyin = document.getElementById('new-pinyin').value.trim();
+      const meaning = document.getElementById('new-meaning').value.trim();
+      const exHanzi = document.getElementById('new-ex-hanzi').value.trim();
+      const exPinyin = document.getElementById('new-ex-pinyin').value.trim();
+      const exMeaning = document.getElementById('new-ex-meaning').value.trim();
+
+      if (!hanzi || !pinyin || !meaning) {
+        showToast('Harap isi Hanzi, Pinyin, dan Arti Indonesia!', 'rose');
+        return;
+      }
+
+      const newCard = {
+        id: `CUSTOM_${Date.now()}`,
+        level: 'CUSTOM',
+        num: customCards.length + 1,
+        hanzi,
+        pinyin,
+        meaning,
+        exHanzi: exHanzi || hanzi,
+        exPinyin: exPinyin || pinyin,
+        exMeaning: exMeaning || meaning
+      };
+
+      customCards.unshift(newCard);
+      saveCustomCards();
+      allCards = [newCard, ...allCards];
+
+      // Reset form
+      ['new-hanzi', 'new-pinyin', 'new-meaning', 'new-ex-hanzi', 'new-ex-pinyin', 'new-ex-meaning'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+
+      closeAddModal();
+      updateStatsUI();
+      setLevelFilter('CUSTOM');
+      showToast(`Kosakata "${hanzi}" berhasil ditambahkan!`, 'emerald');
+    }
+
+    function toggleDarkMode() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      document.getElementById('btn-theme').textContent = isDark ? '☀️' : '🌙';
+      try {
+        localStorage.setItem('mandarin_flashcard_theme', isDark ? 'dark' : 'light');
+      } catch (e) {}
+    }
+
+    function showToast(message, color = 'slate') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = {
+        rose: 'bg-rose-600 text-white',
+        emerald: 'bg-emerald-600 text-white',
+        amber: 'bg-amber-600 text-white',
+        slate: 'bg-slate-800 text-white'
+      };
+      toast.className = `${colors[color] || colors.slate} px-4 py-2.5 rounded-2xl shadow-lg text-xs sm:text-sm font-medium transition-all duration-300 transform translate-y-2 opacity-0`;
+      toast.textContent = message;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 2800);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // =========================================================================
+    // 9. NAVIGASI KEYBOARD & SWIPE LAYAR SENTUH (MOBILE)
+    // =========================================================================
+    document.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+      if (!document.getElementById('add-modal').classList.contains('hidden')) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        flipCard();
+      } else if (e.code === 'ArrowRight') {
+        nextCard();
+      } else if (e.code === 'ArrowLeft') {
+        prevCard();
+      } else if (e.key.toLowerCase() === 'r') {
+        speakCurrentWord(1.0);
+      }
+    });
+
+    // Dukungan gesture geser (swipe) pada layar sentuh HP
+    let touchStartX = 0;
+    const cardWrapper = document.getElementById('card-wrapper');
+    cardWrapper.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    cardWrapper.addEventListener('touchend', (e) => {
+      const diff = e.changedTouches[0].screenX - touchStartX;
+      if (Math.abs(diff) > 55) {
+        if (diff < 0) nextCard();
+        else prevCard();
+      }
+    }, { passive: true });
+
+    // Jalankan aplikasi saat halaman siap
+    window.onload = initData;
+  </script>
+</body>
+</html>
